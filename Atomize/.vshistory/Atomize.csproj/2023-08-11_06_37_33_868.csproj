@@ -1,0 +1,127 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_11_03_54_535.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_25_03_321.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_26_28_860.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_29_04_737.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_29_23_231.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_29_30_030.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_29_48_670.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_30_10_820.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_30_22_574.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_30_43_429.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_31_19_089.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_33_14_156.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_33_23_660.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_33_47_792.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_43_36_530.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_14_46_35_973.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_15_20_59_217.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_15_21_01_539.cs" />
+    <Compile Include="Result\.vshistory\Failure.cs\2023-08-07_17_53_48_200.cs" />
+    <Compile Include="Result\.vshistory\IParseResult.cs\2023-08-07_14_31_36_343.cs" />
+    <Compile Include="Result\.vshistory\IParseResult.cs\2023-08-07_14_34_45_023.cs" />
+    <Compile Include="Result\.vshistory\IParseResult.cs\2023-08-07_14_41_22_032.cs" />
+    <Compile Include="Result\.vshistory\IParseResult.cs\2023-08-07_14_41_46_478.cs" />
+    <Compile Include="Result\.vshistory\IParseResult.cs\2023-08-07_14_43_35_844.cs" />
+    <Compile Include="Result\.vshistory\IParseResult.cs\2023-08-07_14_46_34_482.cs" />
+    <Compile Include="Result\.vshistory\IParseResult.cs\2023-08-07_15_20_50_082.cs" />
+    <Compile Include="Result\.vshistory\IParseResult.cs\2023-08-07_15_21_05_713.cs" />
+    <Compile Include="Result\.vshistory\IParseResult.cs\2023-08-07_17_53_48_208.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_23_58_882.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_43_35_368.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_44_01_734.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_44_21_664.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_44_41_025.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_46_25_350.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_46_38_179.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_46_54_619.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_47_04_667.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_47_17_799.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_47_24_993.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_47_41_442.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_47_52_232.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_48_26_657.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_48_34_457.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_48_50_065.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_49_08_042.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_49_58_054.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_50_24_025.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_50_37_110.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_14_50_53_136.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_15_21_18_853.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_17_06_19_112.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_17_48_28_914.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_17_48_52_551.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_17_49_26_761.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_17_50_28_774.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_17_51_05_166.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_17_52_26_884.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_17_52_50_649.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_17_53_15_544.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_17_55_16_121.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_17_56_34_765.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_17_56_41_317.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_18_06_59_973.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_18_09_17_667.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_18_09_29_664.cs" />
+    <Compile Include="Result\.vshistory\ParseResult.cs\2023-08-07_19_05_04_815.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_30_56_419.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_32_09_362.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_32_25_532.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_32_42_471.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_32_53_720.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_34_47_209.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_35_09_451.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_35_45_566.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_36_05_093.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_36_16_099.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_36_32_026.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_36_42_283.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_37_14_587.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_37_30_027.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_37_40_151.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_37_49_876.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_38_22_809.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_38_38_619.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_38_53_871.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_39_24_638.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_39_32_775.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_39_42_909.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_40_01_961.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_40_50_526.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_42_26_311.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_42_40_240.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_43_03_022.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_43_18_377.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_43_37_539.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_44_49_050.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_45_24_798.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_46_13_277.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_14_46_33_054.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_15_20_51_246.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_15_21_30_609.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_17_05_49_483.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_17_05_54_678.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_17_06_07_115.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_17_06_34_366.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_17_06_50_896.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_17_07_06_466.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_17_07_15_764.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_17_09_43_092.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_17_51_16_736.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_17_55_14_450.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_19_18_37_913.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_19_19_02_887.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_19_19_26_471.cs" />
+    <Compile Include="Result\.vshistory\Token.cs\2023-08-07_19_19_43_079.cs" />
+  </ItemGroup>
+
+</Project>
