@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Atomize", "Atomize\Atomize.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Atomize.Tests", "Atomize.Tests\Atomize.Tests.csproj", "{741C955A-9328-4D6A-9F68-EE91CCC4D710}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Atomize.Benchmarks", "Atomize.Benchmarks\Atomize.Benchmarks.csproj", "{A3512195-3435-4E26-9356-E6D2C95B1D79}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Atomize.Examples", "Atomize.Examples\Atomize.Examples.csproj", "{052DA970-2E79-4AFE-8437-57BD08D708E7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +23,10 @@ Global
 		{741C955A-9328-4D6A-9F68-EE91CCC4D710}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{741C955A-9328-4D6A-9F68-EE91CCC4D710}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{741C955A-9328-4D6A-9F68-EE91CCC4D710}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A3512195-3435-4E26-9356-E6D2C95B1D79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A3512195-3435-4E26-9356-E6D2C95B1D79}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A3512195-3435-4E26-9356-E6D2C95B1D79}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A3512195-3435-4E26-9356-E6D2C95B1D79}.Release|Any CPU.Build.0 = Release|Any CPU
+		{052DA970-2E79-4AFE-8437-57BD08D708E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{052DA970-2E79-4AFE-8437-57BD08D708E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{052DA970-2E79-4AFE-8437-57BD08D708E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{052DA970-2E79-4AFE-8437-57BD08D708E7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,463 +1,616 @@
-﻿using static Atomize.Failure;
+﻿using System.Text.RegularExpressions;
+using static Atomize.Failure;
 
 namespace Atomize;
 
 public static partial class Parse
 {
-    public static Parser<T> Choice<T>(params Parser<T>[] parsers) =>
-        (TextScanner scanner) =>
-        {
-            if (parsers.Length == 0)
-                return new EmptyToken<T>(scanner.Offset);
+   public static Parser<char> Choice(params char[] parsers) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
 
-            var at = scanner.Offset;
-            var errors = new List<(int, string)>();
-            IParseResult<T> result;
+          if (!scanner.StartsWith(parsers))
+             return Expected.Char<char>(parsers, at);
 
-            foreach (var parser in parsers)
-            {
-                result = parser(scanner);
+          return new Token<char>(at, 1, scanner.Chars.Span[scanner.Offset++]);
+       };
 
-                if (result.IsToken)
-                    return result;
+   public static Parser<ReadOnlyMemory<char>> Choice(params Regex[] parsers) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
 
-                scanner.Offset = at;
+          if (!scanner.StartsWith(parsers, out var length))
+             return Expected.Regex<ReadOnlyMemory<char>>(parsers, at);
 
-                errors.Add((result.Offset, result.Why));
-            }
+          return new Lexeme(at, length, scanner.ReadText(length));
+       };
 
-            var errorMessage = string.Join(
-                " \u2228 ",
-                errors.Select(error => $"{{{error.Item2} @ {error.Item1}}}"));
+   public static Parser<ReadOnlyMemory<char>> Choice(params string[] parsers) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
 
-            return Undo<T>(scanner, at, at, errorMessage);
-        };
+          if (!scanner.StartsWith(parsers, out var length))
+             return Expected.Text<ReadOnlyMemory<char>>(parsers, at);
 
-    public static Parser<IList<T>> Exactly<T>(int n, Parser<T> parser) =>
-        (TextScanner scanner) =>
-        {
-            if (n < 0)
-                return Expected.NonNegativeInt<IList<T>>(n);
+          return new Lexeme(at, length, scanner.ReadText(length));
+       };
 
-            if (n == 0)
-                return new EmptyToken<IList<T>>(scanner.Offset);
+   public static Parser<T> Choice<T>(params Parser<T>[] parsers) =>
+       (TextScanner scanner) =>
+       {
+          if (parsers.Length == 0)
+             return new EmptyToken<T>(scanner.Offset);
 
-            var matched = new List<T>();
-            var at = scanner.Offset;
-            IParseResult<T> match = new EmptyToken<T>(at);
+          var at = scanner.Offset;
+          var errors = new List<(int, string)>();
+          IParseResult<T> result;
 
-            for (var i = 0; i < n && (match = parser(scanner)).IsToken; i++)
-                matched.Add(match.Value!);
+          foreach (var parser in parsers)
+          {
+             result = parser(scanner);
 
-            if (matched.Count < n)
-                return Undo<IList<T>>(scanner, match.Offset, at, match.Why);
+             if (result.IsMatch)
+                return result;
 
-            return new Lexeme<IList<T>>(at, scanner.Offset - at, matched);
-        };
+             scanner.Offset = at;
 
-    public static Parser<T> IfFollowedBy<T, F>(Parser<T> parser, Parser<F> assertion) =>
-        (TextScanner scanner) =>
-        {
-            var at = scanner.Offset;
-            var parsed = parser(scanner);
+             errors.Add((result.Offset, result.Why));
+          }
 
-            if (!parsed.IsToken)
-                return Undo<T>(scanner, parsed.Offset, at, parsed.Why);
+          var errorMessage = string.Join(
+               " \u2228 ",
+               errors.Select(error => $"{{{error.Item2} @ {error.Item1}}}"));
 
-            var followedBy = assertion(scanner);
+          return Undo<T>(scanner, at, at, errorMessage);
+       };
 
-            if (!followedBy.IsToken)
-                return Undo<T>(scanner, followedBy.Offset, at, followedBy.Why);
+   public static Parser<IList<T>> Exactly<T>(int n, Parser<T> parser) =>
+       (TextScanner scanner) =>
+       {
+          if (n < 0)
+             return Expected.NonNegativeInt<IList<T>>(n);
 
-            scanner.Offset = at + parsed.Length;
+          if (n == 0)
+             return new EmptyToken<IList<T>>(scanner.Offset);
 
-            return parsed;
-        };
+          var matched = new List<T>();
+          var at = scanner.Offset;
+          IParseResult<T> match = new EmptyToken<T>(at);
 
-    public static Parser<T> IfPrecededBy<T, P>(Parser<T> parser, Parser<P> assertion) =>
-        (TextScanner scanner) =>
-        {
-            var at = scanner.Offset;
-            var parsed = parser(scanner);
+          for (var i = 0; i < n && (match = parser(scanner)).IsMatch; i++)
+             matched.Add(match.Value!);
 
-            if (!parsed.IsToken)
-                return Undo<T>(scanner, parsed.Offset, at, parsed.Why);
+          if (matched.Count < n)
+             return Undo<IList<T>>(scanner, match.Offset, at, match.Why);
 
-            var currentOffset = 0;
-            IParseResult<P>? precededBy = null;
+          return new Token<IList<T>>(at, scanner.Offset - at, matched);
+       };
 
-            scanner.Offset = 0;
+   public static Parser<T> FollowedBy<A, T>(Parser<A> assertion) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
+          var followedBy = assertion(scanner);
 
-            while (currentOffset < at)
-            {
-                precededBy = assertion(scanner);
+          if (!followedBy.IsMatch)
+             return Undo<T>(scanner, followedBy.Offset, at, followedBy.Why);
 
-                if (precededBy.IsToken)
-                    currentOffset += precededBy.Length;
-                else
-                    currentOffset = ++scanner.Offset;
-            }
+          scanner.Offset = at;
 
-            if (precededBy is null)
-                return Expected.Match<T>(scanner, 0, at);
+          return new EmptyToken<T>(at);
+       };
 
-            if (!precededBy.IsToken)
-                return Undo<T>(scanner, precededBy.Offset, at, precededBy.Why);
+   public static Parser<T> IfFollowedBy<T, A>(Parser<T> parser, Parser<A> assertion) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
+          var parsed = parser(scanner);
 
-            if (currentOffset == at)
-            {
-                scanner.Offset = at + parsed.Length;
-                return parsed;
-            }
+          if (!parsed.IsMatch)
+             return Undo<T>(scanner, parsed.Offset, at, parsed.Why);
 
-            var shortMatch = scanner.Chars[precededBy.Offset..at];
-            var shortParse = parser(new(shortMatch));
+          var followedBy = assertion(scanner);
 
-            if (!shortParse.IsToken)
-                return Expected.Match<T>(scanner, precededBy.Offset, at);
+          if (!followedBy.IsMatch)
+             return Undo<T>(scanner, followedBy.Offset, at, followedBy.Why);
 
-            scanner.Offset = at + parsed.Offset;
-            return parsed;
-        };
+          scanner.Offset = at + parsed.Length;
 
-    public static Parser<IList<T>> Join<S, T>(Parser<S> separator, params Parser<T>[] parsers) => (TextScanner scanner) =>
-    {
-        if (parsers.Length == 0)
-            return new EmptyToken<IList<T>>(scanner.Offset);
+          return parsed;
+       };
 
-        var at = scanner.Offset;
-        IParseResult<T> result;
+   public static Parser<T> IfNotFollowedBy<T, A>(Parser<T> parser, Parser<A> assertion) =>
+      (TextScanner scanner) =>
+      {
+         var at = scanner.Offset;
+         var parsed = parser(scanner);
 
-        var matched = new List<T>();
+         if (!parsed.IsMatch)
+            return Undo<T>(
+               scanner, parsed.Offset, at, parsed.Why);
 
-        for (var i = 0; i < parsers.Length - 1; i++)
-        {
-            var parser = parsers[i];
-            result = parser(scanner);
+         var followedBy = assertion(scanner);
 
-            if (!result.IsToken)
-                return Undo<IList<T>>(scanner, result.Offset, at, result.Why);
+         if (followedBy.IsMatch)
+            return DidNotExpect.Match<T>(scanner, followedBy.Offset, at);
 
-            matched.Add(result.Value!);
+         scanner.Offset = at + parsed.Length;
 
-            var sResult = separator(scanner);
+         return parsed;
+      };
 
-            if (!sResult.IsToken)
-                return Undo<IList<T>>(scanner, sResult.Offset, at, sResult.Why);
-        }
+   public static Parser<T> IfNotPrecededBy<T, A>(Parser<T> parser, Parser<A> assertion) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
+          var parsed = parser(scanner);
 
-        result = parsers[^1](scanner);
+          if (!parsed.IsMatch)
+             return Undo<T>(scanner, parsed.Offset, at, parsed.Why);
 
-        if (!result.IsToken)
+          var currentOffset = 0;
+          IParseResult<A>? precededBy = null;
+
+          scanner.Offset = 0;
+
+          while (currentOffset < at)
+          {
+             precededBy = assertion(scanner);
+
+             if (precededBy.IsMatch)
+             {
+                currentOffset += precededBy.Length;
+             }
+             else
+             {
+                currentOffset = ++scanner.Offset;
+                precededBy = null;
+             }
+          }
+
+          if (precededBy is null)
+          {
+             scanner.Offset = at + parsed.Length;
+             return parsed;
+          }
+
+          if (currentOffset == at)
+             return DidNotExpect.Match<T>(scanner, precededBy.Offset, at);
+
+          var shortMatch = scanner.Chars[precededBy.Offset..at];
+          var shortParse = assertion(new(shortMatch));
+
+          if (!shortParse.IsMatch)
+          {
+             scanner.Offset = at + parsed.Length;
+             return parsed;
+          }
+
+          return DidNotExpect.Match<T>(scanner, precededBy.Offset, at);
+       };
+
+   public static Parser<T> IfPrecededBy<T, A>(Parser<T> parser, Parser<A> assertion) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
+          var parsed = parser(scanner);
+
+          if (!parsed.IsMatch)
+             return Undo<T>(scanner, parsed.Offset, at, parsed.Why);
+
+          var currentOffset = 0;
+          IParseResult<A>? precededBy = null;
+
+          scanner.Offset = 0;
+
+          while (currentOffset < at)
+          {
+             precededBy = assertion(scanner);
+
+             if (precededBy.IsMatch)
+                currentOffset += precededBy.Length;
+             else
+                currentOffset = ++scanner.Offset;
+          }
+
+          if (precededBy is null)
+             return Expected.Match<T>(scanner, 0, at);
+
+          if (!precededBy.IsMatch)
+             return Undo<T>(scanner, precededBy.Offset, at, precededBy.Why);
+
+          if (currentOffset == at)
+          {
+             scanner.Offset = at + parsed.Length;
+             return parsed;
+          }
+
+          var shortMatch = scanner.Chars[precededBy.Offset..at];
+          var shortParse = assertion(new(shortMatch));
+
+          if (!shortParse.IsMatch)
+             return Expected.Match<T>(scanner, precededBy.Offset, at);
+
+          scanner.Offset = at + parsed.Length;
+          return parsed;
+       };
+
+   public static Parser<IList<T>> Join<S, T>(Parser<S> separator, params Parser<T>[] parsers) => (TextScanner scanner) =>
+   {
+      if (parsers.Length == 0)
+         return new EmptyToken<IList<T>>(scanner.Offset);
+
+      var at = scanner.Offset;
+      IParseResult<T> result;
+
+      var matched = new List<T>();
+
+      for (var i = 0; i < parsers.Length - 1; i++)
+      {
+         var parser = parsers[i];
+         result = parser(scanner);
+
+         if (!result.IsMatch)
             return Undo<IList<T>>(scanner, result.Offset, at, result.Why);
 
-        matched.Add(result.Value!);
+         matched.Add(result.Value!);
 
-        return new Lexeme<IList<T>>(at, scanner.Offset - at, matched);
-    };
+         var sResult = separator(scanner);
 
-    public static Parser<T> Island<O, T, C>(Parser<O> open, Parser<T> parser, Parser<C> close) =>
-        (TextScanner scanner) =>
-        {
-            var at = scanner.Offset;
-            var opener = open(scanner);
+         if (!sResult.IsMatch)
+            return Undo<IList<T>>(scanner, sResult.Offset, at, sResult.Why);
+      }
 
-            if (!opener.IsToken)
-                return Undo<T>(scanner, opener.Offset, at, opener.Why);
+      result = parsers[^1](scanner);
 
-            var parsed = parser(scanner);
+      if (!result.IsMatch)
+         return Undo<IList<T>>(scanner, result.Offset, at, result.Why);
 
-            if (!parsed.IsToken)
-                return Undo<T>(scanner, parsed.Offset, at, parsed.Why);
+      matched.Add(result.Value!);
 
-            var closer = close(scanner);
+      return new Token<IList<T>>(at, scanner.Offset - at, matched);
+   };
 
-            if (!closer.IsToken)
-                return Undo<T>(scanner, closer.Offset, at, closer.Why);
+   public static Parser<T> Island<O, T, C>(Parser<O> open, Parser<T> parser, Parser<C> close) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
+          var opener = open(scanner);
 
-            return parsed;
-        };
+          if (!opener.IsMatch)
+             return Undo<T>(scanner, opener.Offset, at, opener.Why);
 
-    public static Parser<IList<T>> Maximum<T>(int n, Parser<T> parser) =>
-        (TextScanner scanner) =>
-        {
-            if (n < 0)
-                return Expected.NonNegativeInt<IList<T>>(n);
+          var parsed = parser(scanner);
 
-            var matched = new List<T>();
-            var at = scanner.Offset;
-            IParseResult<T> match;
+          if (!parsed.IsMatch)
+             return Undo<T>(scanner, parsed.Offset, at, parsed.Why);
 
-            for (var i = 0; i < n && (match = parser(scanner)).IsToken; i++)
-                matched.Add(match.Value!);
+          var closer = close(scanner);
 
-            return new Lexeme<IList<T>>(at, scanner.Offset - at, matched);
-        };
+          if (!closer.IsMatch)
+             return Undo<T>(scanner, closer.Offset, at, closer.Why);
 
-    public static Parser<IList<T>> Minimum<T>(int n, Parser<T> parser) =>
-        (TextScanner scanner) =>
-        {
-            if (n < 0)
-                return Expected.NonNegativeInt<IList<T>>(n);
+          return parsed;
+       };
 
-            var matched = new List<T>();
-            var at = scanner.Offset;
-            IParseResult<T>? match = null;
+   public static Parser<IList<T>> Maximum<T>(int n, Parser<T> parser) =>
+       (TextScanner scanner) =>
+       {
+          if (n < 0)
+             return Expected.NonNegativeInt<IList<T>>(n);
 
-            while ((match = parser(scanner)).IsToken)
-                matched.Add(match.Value!);
+          var matched = new List<T>();
+          var at = scanner.Offset;
+          IParseResult<T> match;
 
-            if (matched.Count < n)
-                return Undo<IList<T>>(scanner, match.Offset, at, match.Why);
+          for (var i = 0; i < n && (match = parser(scanner)).IsMatch; i++)
+             matched.Add(match.Value!);
 
-            return new Lexeme<IList<T>>(at, scanner.Offset - at, matched);
-        };
+          return new Token<IList<T>>(at, scanner.Offset - at, matched);
+       };
 
-    public static Parser<IList<T>> NotExactly<T>(int n, Parser<T> parser) =>
-        (TextScanner scanner) =>
-        {
-            if (n < 0)
-                return Expected.NonNegativeInt<IList<T>>(n);
+   public static Parser<T> Memoize<T>(Parser<T> parser) =>
+       new PackratParser<T>(parser).Apply;
 
-            var matched = new List<T>();
-            var at = scanner.Offset;
-            IParseResult<T> match = new EmptyToken<T>(at);
+   public static Parser<IList<T>> Minimum<T>(int n, Parser<T> parser) =>
+       (TextScanner scanner) =>
+       {
+          if (n < 0)
+             return Expected.NonNegativeInt<IList<T>>(n);
 
-            while (scanner.Offset < scanner.Chars.Length && (match = parser(scanner)).IsToken)
-                matched.Add(match.Value!);
+          var matched = new List<T>();
+          var at = scanner.Offset;
+          IParseResult<T>? match = null;
 
-            if (matched.Count == n)
-                return DidNotExpect.Match<IList<T>>(scanner, match.Offset, at);
+          while ((match = parser(scanner)).IsMatch)
+             matched.Add(match.Value!);
 
-            return new Lexeme<IList<T>>(at, scanner.Offset - at, matched);
-        };
+          if (matched.Count < n)
+             return Undo<IList<T>>(scanner, match.Offset, at, match.Why);
 
-    public static Parser<T> NotFollowedBy<T, F>(Parser<T> parser, Parser<F> assertion) =>
-        (TextScanner scanner) =>
-        {
-            var at = scanner.Offset;
-            var parsed = parser(scanner);
+          return new Token<IList<T>>(at, scanner.Offset - at, matched);
+       };
 
-            if (!parsed.IsToken)
-                return Undo<T>(
-                    scanner, parsed.Offset, at, parsed.Why);
+   public static Parser<IList<T>> NotExactly<T>(int n, Parser<T> parser) =>
+       (TextScanner scanner) =>
+       {
+          if (n < 0)
+             return Expected.NonNegativeInt<IList<T>>(n);
 
-            var followedBy = assertion(scanner);
+          var matched = new List<T>();
+          var at = scanner.Offset;
+          IParseResult<T> match = new EmptyToken<T>(at);
 
-            if (followedBy.IsToken)
-                return DidNotExpect.Match<T>(scanner, followedBy.Offset, at);
+          while (scanner.Offset < scanner.Chars.Length && (match = parser(scanner)).IsMatch)
+             matched.Add(match.Value!);
 
-            scanner.Offset = at + parsed.Length;
+          if (matched.Count == n)
+             return DidNotExpect.Match<IList<T>>(scanner, match.Offset, at);
 
-            return parsed;
-        };
+          return new Token<IList<T>>(at, scanner.Offset - at, matched);
+       };
 
-    public static Parser<T> NotPrecededBy<T, P>(Parser<T> parser, Parser<P> assertion) =>
-        (TextScanner scanner) =>
-        {
-            var at = scanner.Offset;
-            var parsed = parser(scanner);
-
-            if (!parsed.IsToken)
-                return Undo<T>(scanner, parsed.Offset, at, parsed.Why);
-
-            var currentOffset = 0;
-            IParseResult<P>? precededBy = null;
-
-            scanner.Offset = 0;
-
-            while (currentOffset < at)
-            {
-                precededBy = assertion(scanner);
-
-                if (precededBy.IsToken)
-                {
-                    currentOffset += precededBy.Length;
-                }
-                else
-                {
-                    currentOffset = ++scanner.Offset;
-                    precededBy = null;
-                }
-            }
-
-            if (precededBy is null)
-            {
-                scanner.Offset = at + parsed.Length;
-                return parsed;
-            }
-
-            if (currentOffset == at)
-                return DidNotExpect.Match<T>(scanner, precededBy.Offset, at);
-
-            var shortMatch = scanner.Chars[precededBy.Offset..at];
-            var shortParse = parser(new(shortMatch));
-
-            if (!shortParse.IsToken)
-            {
-                scanner.Offset = at + parsed.Length;
-                return parsed;
-            }
-
-            return DidNotExpect.Match<T>(scanner, precededBy.Offset, at);
-        };
-
-    public static Parser<T> Optional<T>(Parser<T> parser) =>
-        (TextScanner scanner) =>
-        {
-            var at = scanner.Offset;
-            var match = parser(scanner);
-
-            if (!match.IsToken)
-            {
-                scanner.Offset = at;
-
-                return new EmptyToken<T>(at);
-            }
-
-            return match;
-        };
-
-    public static Parser<(IParseResult<T>, IParseResult<U>)> Or<T, U>(Parser<T> parser1, Parser<U> parser2) =>
-        (TextScanner scanner) =>
-        {
-            var at = scanner.Offset;
-            var first = parser1(scanner);
+   public static Parser<T> NotFollowedBy<A, T>(Parser<A> assertion) =>
+      (TextScanner scanner) =>
+      {
+         var at = scanner.Offset;
+         var followedBy = assertion(scanner);
+
+         if (followedBy.IsMatch)
+            return DidNotExpect.Match<T>(scanner, followedBy.Offset, at);
+
+         scanner.Offset = at;
+
+         return new EmptyToken<T>(at);
+      };
+
+   public static Parser<T> NotPrecededBy<A, T>(Parser<A> assertion) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
+
+          var currentOffset = 0;
+          IParseResult<A>? precededBy = null;
+
+          scanner.Offset = 0;
+
+          while (currentOffset < at)
+          {
+             precededBy = assertion(scanner);
+
+             if (precededBy.IsMatch)
+             {
+                currentOffset += precededBy.Length;
+             }
+             else
+             {
+                currentOffset = ++scanner.Offset;
+                precededBy = null;
+             }
+          }
+
+          if (precededBy is null)
+          {
+             scanner.Offset = at;
+
+             return new EmptyToken<T>(at);
+          }
+
+          if (currentOffset == at)
+             return DidNotExpect.Match<T>(scanner, precededBy.Offset, at);
+
+          var shortMatch = scanner.Chars[precededBy.Offset..at];
+          var shortParse = assertion(new(shortMatch));
+
+          if (!shortParse.IsMatch)
+          {
+             scanner.Offset = at;
+             return new EmptyToken<T>(at);
+          }
+
+          return DidNotExpect.Match<T>(scanner, precededBy.Offset, at);
+       };
+
+   public static Parser<T> Optional<T>(Parser<T> parser) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
+          var match = parser(scanner);
+
+          if (!match.IsMatch)
+          {
+             scanner.Offset = at;
+
+             return new EmptyToken<T>(at);
+          }
+
+          return match;
+       };
+
+   public static Parser<(IParseResult<T>, IParseResult<U>)> Or<T, U>(Parser<T> parser1, Parser<U> parser2) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
+          var first = parser1(scanner);
+
+          if (first.IsMatch)
+          {
+             var result = parser2(scanner);
+             var length = result.IsMatch ? scanner.Offset - at : first.Length;
+
+             if (!result.IsMatch)
+                scanner.Offset = at + first.Length;
+
+             return new Token<(IParseResult<T>, IParseResult<U>)>(
+                  at,
+                  length,
+                  (first, result));
+          }
+
+          scanner.Offset = at;
+
+          var second = parser2(scanner);
+
+          if (!second.IsMatch)
+             return Undo<(IParseResult<T>, IParseResult<U>)>(
+                  scanner,
+                  second.Offset,
+                  at,
+                  $"{{@ {first.Offset} : {first.Why}}} \u2228 {{@ {second.Offset} : {second.Why}}}");
 
-            if (first.IsToken)
-            {
-                var result = parser2(scanner);
-                var length = result.IsToken ? scanner.Offset - at : first.Length;
-
-                if (!result.IsToken)
-                    scanner.Offset = at + first.Length;
-
-                return new Lexeme<(IParseResult<T>, IParseResult<U>)>(
-                    at,
-                    length,
-                    (first, result));
-            }
-
-            scanner.Offset = at;
-
-            var second = parser2(scanner);
-
-            if (!second.IsToken)
-                return Undo<(IParseResult<T>, IParseResult<U>)>(
-                    scanner,
-                    second.Offset,
-                    at,
-                    $"{{@ {first.Offset} : {first.Why}}} \u2228 {{@ {second.Offset} : {second.Why}}}");
-
-            return new Lexeme<(IParseResult<T>, IParseResult<U>)>(
-                at,
-                second.Length, (first, second));
-        };
-
-    public static Parser<IList<T>> Range<T>(int min, int max, Parser<T> parser) =>
-        (TextScanner scanner) =>
-        {
-            if (min < 0 || max < min)
-                return Expected.ValidRange<IList<T>>(min, max);
-
-            if (min == max && min == 0)
-                return new EmptyToken<IList<T>>(scanner.Offset);
-
-            var matched = new List<T>();
-            var at = scanner.Offset;
-            IParseResult<T>? match = null;
-
-            for (var i = 0; i < max && (match = parser(scanner)).IsToken; i++)
-                matched.Add(match.Value!);
-
-            if (matched.Count < min)
-                return Undo<IList<T>>(scanner, match!.Offset, at, match.Why);
-
-            return new Lexeme<IList<T>>(at, scanner.Offset - at, matched);
-        };
-
-    public static Parser<T> Satisfies<T>(Parser<T> parser, Predicate<T> test) =>
-        (TextScanner scanner) =>
-        {
-            var at = scanner.Offset;
-            var result = parser(scanner);
-
-            if (!result.IsToken)
-                return Undo<T>(scanner, result.Offset, at, result.Why);
-
-            if (!test(result.Value!))
-                return Expected.ToPass(scanner, result.Value!, at, at);
-
-            return result;
-        };
-
-    public static Parser<IList<T>> SeparatedBy<T, S>(Parser<T> parser, Parser<S> separator) =>
-        (TextScanner scanner) =>
-        {
-            var at = scanner.Offset;
-            var result = parser(scanner);
-            var separation = 0;
-
-            if (!result.IsToken)
-                return Undo<IList<T>>(scanner, result.Offset, at, result.Why);
-
-            var matched = new List<T>();
-
-            while (result.IsToken)
-            {
-                matched.Add(result.Value!);
-
-                var currentOffset = scanner.Offset;
-                var sResult = separator(scanner);
-
-                if (!sResult.IsToken)
-                {
-                    scanner.Offset = currentOffset;
-
-                    return new Lexeme<IList<T>>(at, currentOffset - at, matched);
-                }
-
-                separation = sResult.Length;
-                result = parser(scanner);
-            }
-
-            scanner.Offset -= separation;
-
-            return new Lexeme<IList<T>>(at, scanner.Offset - at, matched);
-        };
-
-    public static Parser<ReadOnlyMemory<char>> Until<T>(Parser<T> parser) =>
-        (TextScanner scanner) =>
-        {
-            var at = scanner.Offset;
-            var result = parser(scanner);
-            var index = at;
-
-            while (!result.IsToken && scanner.Offset < scanner.Length)
-            {
-                index++;
-                scanner.Offset++;
-                result = parser(scanner);
-            }
-
-            scanner.Offset = at;
-
-            if (!result.IsToken)
-                return new Lexeme<ReadOnlyMemory<char>>(at, scanner.Length - at, scanner.ReadToEnd());
-
-            return new Lexeme<ReadOnlyMemory<char>>(at, index - at, scanner.ReadText(index - at));
-        };
-
-    public static Parser<IList<T>> ZeroOrMore<T>(Parser<T> parser) =>
-        (TextScanner scanner) =>
-        {
-            var matched = new List<T>();
-            var at = scanner.Offset;
-            IParseResult<T> match;
-
-            while (scanner.Offset < scanner.Chars.Length && (match = parser(scanner)).IsToken)
-                matched.Add(match.Value!);
-
-            return new Lexeme<IList<T>>(at, scanner.Offset - at, matched);
-        };
+          return new Token<(IParseResult<T>, IParseResult<U>)>(
+               at,
+               second.Length, (first, second));
+       };
+
+   public static Parser<T> PrecededBy<A, T>(Parser<A> assertion) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
+          var currentOffset = 0;
+          IParseResult<A>? precededBy = null;
+
+          scanner.Offset = 0;
+
+          while (currentOffset < at)
+          {
+             precededBy = assertion(scanner);
+
+             if (precededBy.IsMatch)
+                currentOffset += precededBy.Length;
+             else
+                currentOffset = ++scanner.Offset;
+          }
+
+          if (precededBy is null)
+             return Expected.Match<T>(scanner, 0, at);
+
+          if (!precededBy.IsMatch)
+             return Undo<T>(scanner, precededBy.Offset, at, precededBy.Why);
+
+          if (currentOffset > at)
+          {
+             var shortMatch = scanner.Chars[precededBy.Offset..at];
+             var shortParse = assertion(new(shortMatch));
+
+             if (!shortParse.IsMatch)
+                return Expected.Match<T>(scanner, precededBy.Offset, at);
+          }
+
+          scanner.Offset = at;
+          return new EmptyToken<T>(at);
+       };
+
+   public static Parser<IList<T>> Range<T>(int min, int max, Parser<T> parser) =>
+       (TextScanner scanner) =>
+       {
+          if (min < 0 || max < min)
+             return Expected.ValidRange<IList<T>>(min, max);
+
+          if (min == max && min == 0)
+             return new EmptyToken<IList<T>>(scanner.Offset);
+
+          var matched = new List<T>();
+          var at = scanner.Offset;
+          IParseResult<T>? match = null;
+
+          for (var i = 0; i < max && (match = parser(scanner)).IsMatch; i++)
+             matched.Add(match.Value!);
+
+          if (matched.Count < min)
+             return Undo<IList<T>>(scanner, match!.Offset, at, match.Why);
+
+          return new Token<IList<T>>(at, scanner.Offset - at, matched);
+       };
+
+   public static Parser<T> Ref<T>(Func<Parser<T>> parserRef) =>
+       new ParserReference<T>(parserRef).Parse;
+
+   public static Parser<T> Satisfies<T>(Parser<T> parser, Func<T, bool> test) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
+          var result = parser(scanner);
+
+          if (!result.IsMatch)
+             return Undo<T>(scanner, result.Offset, at, result.Why);
+
+          if (!test(result.Value!))
+             return Expected.ToPass(scanner, result.Value!, at, at);
+
+          return result;
+       };
+
+   public static Parser<IList<T>> SeparatedBy<T, S>(Parser<T> parser, Parser<S> separator) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
+          var result = parser(scanner);
+          var separation = 0;
+
+          if (!result.IsMatch)
+             return Undo<IList<T>>(scanner, result.Offset, at, result.Why);
+
+          var matched = new List<T>();
+
+          while (result.IsMatch)
+          {
+             matched.Add(result.Value!);
+
+             var currentOffset = scanner.Offset;
+             var sResult = separator(scanner);
+
+             if (!sResult.IsMatch)
+             {
+                scanner.Offset = currentOffset;
+
+                return new Token<IList<T>>(at, currentOffset - at, matched);
+             }
+
+             separation = sResult.Length;
+             result = parser(scanner);
+          }
+
+          scanner.Offset -= separation;
+
+          return new Token<IList<T>>(at, scanner.Offset - at, matched);
+       };
+
+   public static Parser<ReadOnlyMemory<char>> Until<T>(Parser<T> parser) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
+          var result = parser(scanner);
+          var index = at;
+
+          while (!result.IsMatch && scanner.Offset < scanner.Length)
+          {
+             index++;
+             scanner.Offset++;
+             result = parser(scanner);
+          }
+
+          scanner.Offset = at;
+
+          if (!result.IsMatch)
+             return new Token<ReadOnlyMemory<char>>(at, scanner.Length - at, scanner.ReadToEnd());
+
+          return new Token<ReadOnlyMemory<char>>(at, index - at, scanner.ReadText(index - at));
+       };
+
+   public static Parser<IList<T>> ZeroOrMore<T>(Parser<T> parser) =>
+       (TextScanner scanner) =>
+       {
+          var matched = new List<T>();
+          var at = scanner.Offset;
+          IParseResult<T> match;
+
+          while (scanner.Offset < scanner.Chars.Length && (match = parser(scanner)).IsMatch)
+             matched.Add(match.Value!);
+
+          return new Token<IList<T>>(at, scanner.Offset - at, matched);
+       };
 }

@@ -5,156 +5,220 @@ namespace Atomize;
 
 public record TextScanner
 {
-    private readonly IDictionary<int, int>? _imap;
+   private readonly IDictionary<int, int>? _imap;
 
-    public TextScanner(string text, bool squeeze = false)
-    {
-        Text = text;
-        Offset = 0;
+   public TextScanner(string text, bool squeeze = false)
+   {
+      Text = text;
+      Offset = 0;
 
-        if (squeeze)
-            (Chars, _imap) = Squeeze(text);
-        else
-            Chars = new ReadOnlyMemory<char>(text.ToCharArray());
-    }
+      if (squeeze)
+         (Chars, _imap) = Squeeze(text);
+      else
+         Chars = new ReadOnlyMemory<char>(text.ToCharArray());
+   }
 
-    internal TextScanner(ReadOnlyMemory<char> chars)
-    {
-        Text = new(chars.Span);
-        Offset = 0;
-        Chars = chars;
-    }
+   internal TextScanner(ReadOnlyMemory<char> chars)
+   {
+      Text = new(chars.Span);
+      Offset = 0;
+      Chars = chars;
+   }
 
-    internal ReadOnlyMemory<char> Chars { get; }
+   public int Index => _imap is null ? Offset : _imap[Offset];
 
-    public int Index => _imap is null ? Offset : _imap[Offset];
+   public int Length => Chars.Length;
 
-    public int Length => Chars.Length;
+   public int Offset { get; internal set; }
 
-    public int Offset { get; internal set; }
+   public string Text { get; }
 
-    public string Text { get; }
+   internal ReadOnlyMemory<char> Chars { get; }
 
-    public void Advance(int count = 1)
-    {
-        if (count < 0 || count > (Chars.Length - Offset))
-            throw new InvalidOperationException($"Not enough text to advance.");
+   internal long PackratIdentifier { get; set; }
 
-        Offset += count;
-    }
+   public void Advance(int count = 1)
+   {
+      if (count < 0 || count > (Chars.Length - Offset))
+         throw new InvalidOperationException($"Not enough text to advance.");
 
-    public void Backtrack(int count = 1)
-    {
-        if (count < 0 || count > Offset)
-            throw new InvalidOperationException($"Not enough text to backtrack.");
+      Offset += count;
+   }
 
-        Offset -= count;
-    }
+   public void Backtrack(int count = 1)
+   {
+      if (count < 0 || count > Offset)
+         throw new InvalidOperationException($"Not enough text to backtrack.");
 
-    public ReadOnlyMemory<char> Read(int length = 1)
-    {
-        if (length < 0 || length > (Chars.Length - Offset))
-            throw new InvalidOperationException($"Cannot read {length} characters.");
+      Offset -= count;
+   }
 
-        var substring = Chars.Slice(Offset, length);
+   public ReadOnlyMemory<char> Read(int length = 1)
+   {
+      if (length < 0 || length > (Chars.Length - Offset))
+         throw new InvalidOperationException($"Cannot read {length} characters.");
 
-        Offset += length;
+      var substring = Chars.Slice(Offset, length);
 
-        return substring;
-    }
+      Offset += length;
 
-    public ReadOnlyMemory<char> ReadToEnd()
-    {
-        if (Offset == Chars.Length)
-            return ReadOnlyMemory<char>.Empty;
+      return substring;
+   }
 
-        var substring = Chars[Offset..];
+   public ReadOnlyMemory<char> ReadToEnd()
+   {
+      if (Offset == Chars.Length)
+         return ReadOnlyMemory<char>.Empty;
 
-        Offset = Chars.Length;
+      var substring = Chars[Offset..];
 
-        return substring;
-    }
+      Offset = Chars.Length;
 
-    public void Reset() => Offset = 0;
+      return substring;
+   }
 
-    internal bool StartsWith(char parser) =>
-        Offset < Chars.Length && Chars.Span[Offset] == parser;
+   public void Reset() => Offset = 0;
 
-    internal bool StartsWith(string parser) =>
-        (Chars.Length - Offset) >= parser.Length &&
-        MemoryExtensions.Equals(
-            Chars.Slice(Offset, parser.Length).Span,
-            parser,
-            StringComparison.Ordinal);
+   internal bool StartsWith(char parser) =>
+       Offset < Chars.Length && Chars.Span[Offset] == parser;
 
-    internal bool StartsWith(Regex parser) => StartsWith(parser, out _);
+   internal bool StartsWith(char[] parsers)
+   {
+      if (Offset == Chars.Length)
+         return false;
 
-    internal bool StartsWith(Regex parser, out int length)
-    {
-        length = 0;
+      var nextCharacter = Chars.Span[Offset];
 
-        var matches = parser.EnumerateMatches(Chars.Span, Offset);
+      foreach (var character in parsers)
+         if (nextCharacter == character)
+            return true;
 
-        if (matches.MoveNext() && matches.Current.Index == Offset)
-        {
+      return false;
+   }
+
+   internal bool StartsWith(string parser) =>
+       (Chars.Length - Offset) >= parser.Length &&
+       MemoryExtensions.Equals(
+           Chars.Slice(Offset, parser.Length).Span,
+           parser,
+           StringComparison.Ordinal);
+
+   internal bool StartsWith(string[] parsers, out int length)
+   {
+      length = 0;
+
+      if (Offset == Chars.Length)
+         return false;
+
+      var prefixLength = -1;
+      ReadOnlyMemory<char> substring = ReadOnlyMemory<char>.Empty;
+
+      foreach (var parser in parsers)
+      {
+         if ((Chars.Length - Offset) >= parser.Length)
+         {
+            if (parser.Length != prefixLength)
+            {
+               prefixLength = parser.Length;
+               substring = Chars.Slice(Offset, prefixLength);
+            }
+
+            if (substring.Span.Equals(parser, StringComparison.Ordinal))
+            {
+               length = prefixLength;
+               return true;
+            }
+         }
+      }
+
+      return false;
+   }
+
+   internal bool StartsWith(Regex parser, out int length)
+   {
+      length = 0;
+
+      var matches = parser.EnumerateMatches(Chars.Span, Offset);
+
+      if (matches.MoveNext() && matches.Current.Index == Offset)
+      {
+         length = matches.Current.Length;
+
+         return true;
+      }
+
+      return false;
+   }
+
+   internal bool StartsWith(Regex[] parsers, out int length)
+   {
+      length = 0;
+
+      for (int i = 0; i < parsers.Length; i++)
+      {
+         var matches = parsers[i].EnumerateMatches(Chars.Span, Offset);
+
+         if (matches.MoveNext() && matches.Current.Index == Offset)
+         {
             length = matches.Current.Length;
 
             return true;
-        }
+         }
+      }
 
-        return false;
-    }
+      return false;
+   }
 
-    internal ReadOnlyMemory<char> ReadText(int n = 1)
-    {
-        var substring = Chars.Slice(Offset, n);
+   internal ReadOnlyMemory<char> ReadText(int n = 1)
+   {
+      var substring = Chars.Slice(Offset, n);
 
-        Offset += n;
+      Offset += n;
 
-        return substring;
-    }
+      return substring;
+   }
 
-    private static (ReadOnlyMemory<char>, IDictionary<int, int>?) Squeeze(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return (ReadOnlyMemory<char>.Empty, null);
+   private static (ReadOnlyMemory<char>, IDictionary<int, int>?) Squeeze(string text)
+   {
+      if (string.IsNullOrWhiteSpace(text))
+         return (ReadOnlyMemory<char>.Empty, null);
 
-        static bool isEscaped(string input, int i) => i > 0 && input[i - 1] == '\\';
+      static bool isEscaped(string input, int i) => i > 0 && input[i - 1] == '\\';
 
-        var tokens = new StringBuilder(text.Length);
-        var imap = new Dictionary<int, int>();
-        var whitespace = 0;
-        var stringContext = 0;
-        var index = 0;
+      var tokens = new StringBuilder(text.Length);
+      var imap = new Dictionary<int, int>();
+      var whitespace = 0;
+      var stringContext = 0;
+      var index = 0;
 
-        while (index < text.Length)
-        {
-            var match = Parse.Text.WhitespacePattern.Match(text, index);
+      while (index < text.Length)
+      {
+         var match = Parse.Text.WhitespacePattern.Match(text, index);
 
-            if (match.Success && match.Index == index && stringContext == 0)
-            {
-                whitespace += match.Length;
-                index += match.Length;
-                continue;
-            }
+         if (match.Success && match.Index == index && stringContext == 0)
+         {
+            whitespace += match.Length;
+            index += match.Length;
+            continue;
+         }
 
-            var c = text[index];
+         var c = text[index];
 
-            imap[index - whitespace] = index;
+         imap[index - whitespace] = index;
 
-            if (c == '\'' || c == '"')
-                stringContext = stringContext == 0
-                    ? isEscaped(text, index)
-                        ? 0
-                        : c
-                    : stringContext != c || isEscaped(text, index)
-                        ? stringContext
-                        : 0;
+         if (c == '\'' || c == '"')
+            stringContext = stringContext == 0
+                ? isEscaped(text, index)
+                    ? 0
+                    : c
+                : stringContext != c || isEscaped(text, index)
+                    ? stringContext
+                    : 0;
 
-            tokens.Append(c);
-            index++;
-        }
+         tokens.Append(c);
+         index++;
+      }
 
-        return (new ReadOnlyMemory<char>(tokens.ToString().ToCharArray()), imap);
-    }
+      return (new ReadOnlyMemory<char>(tokens.ToString().ToCharArray()), imap);
+   }
 }

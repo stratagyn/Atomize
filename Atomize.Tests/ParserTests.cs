@@ -1,2341 +1,3111 @@
-﻿using static Atomize.Parse;
+﻿using System.Text.RegularExpressions;
+
+using static Atomize.Parse;
 
 namespace Atomize.Tests;
 
 public static partial class AtomizeTests
 {
-    public class BindTests
-    {
-        private readonly TextScanner _reader;
+   public class BindTests
+   {
+      private readonly TextScanner _reader;
 
-        public BindTests() => _reader = new TextScanner(TestText);
+      public BindTests() => _reader = new TextScanner(TestText);
 
-        [Fact]
-        public void Bind_Match_Is_Atom()
-        {
-            var parser = Bind<char, char>(Atom('a'), a => Empty<char>);
+      [Fact]
+      public void Bind_Match_Is_Atom()
+      {
+         var parser = Bind<char, char>(Atom('a'), a => Empty<char>);
 
-            var actual = parser(_reader).IsToken;
+         var actual = parser(_reader).IsMatch;
 
-            Assert.True(actual);
-        }
+         Assert.True(actual);
+      }
 
-        [Fact]
-        public void Bind_Match_AdvancesOffset()
-        {
-            var parser = Bind<char, char>(Atom('a'), a => Empty<char>);
-            var expected = _reader.Offset + 1;
-            
-            _ = parser(_reader);
+      [Fact]
+      public void Bind_Match_AdvancesOffset()
+      {
+         var parser = Bind<char, char>(Atom('a'), a => Empty<char>);
+         var expected = _reader.Offset + 1;
 
-            var actual = _reader.Offset;
+         _ = parser(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Bind_Match_NoRead_Is_Atom()
-        {
-            var parser = Bind<char, char>(Ignore('a'), a => Empty<char>);
+         Assert.Equal(expected, actual);
+      }
 
-            var actual = parser(_reader).IsToken;
+      [Fact]
+      public void Bind_Match_NoRead_Is_Atom()
+      {
+         var parser = Bind<char, char>(Ignore('a'), a => Empty<char>);
 
-            Assert.True(actual);
-        }
+         var actual = parser(_reader).IsMatch;
 
-        [Fact]
-        public void Bind_Match_NoRead_AdvancesOffset()
-        {
-            var parser = Bind<char, char>(Ignore('a'), a => Empty<char>);
-            var expected = _reader.Offset + 1;
+         Assert.True(actual);
+      }
 
-            _ = parser(_reader);
+      [Fact]
+      public void Bind_Match_NoRead_AdvancesOffset()
+      {
+         var parser = Bind<char, char>(Ignore('a'), a => Empty<char>);
+         var expected = _reader.Offset + 1;
 
-            var actual = _reader.Offset;
+         _ = parser(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Bind_Match_ReadFirstMatchOnly_Is_Atom()
-        {
-            var parser = Bind(
-                Atom('a'), 
-                a => Bind<char, char>(
-                    Ignore('b'), 
-                    _ => Empty<char>));
+         Assert.Equal(expected, actual);
+      }
 
-            var parse = parser(_reader);
-            var actual = parse.IsToken;
+      [Fact]
+      public void Bind_Match_ReadFirstMatchOnly_Is_Atom()
+      {
+         var parser = Bind(
+             Atom('a'),
+             a => Bind<char, char>(
+                 Ignore('b'),
+                 _ => Empty<char>));
 
-            Assert.True(actual);
-        }
+         var parse = parser(_reader);
+         var actual = parse.IsMatch;
 
-        [Fact]
-        public void Bind_Match_ReadFirstMatchOnly_AdvancesOffset()
-        {
-            var parser = Bind(
-                Atom('a'), 
-                a => Bind<char, char>(
-                    Ignore('b'), 
-                    _ => Empty<char>));
+         Assert.True(actual);
+      }
 
-            var expected = _reader.Offset + 2;
+      [Fact]
+      public void Bind_Match_ReadFirstMatchOnly_AdvancesOffset()
+      {
+         var parser = Bind(
+             Atom('a'),
+             a => Bind<char, char>(
+                 Ignore('b'),
+                 _ => Empty<char>));
 
-            _ = parser(_reader);
+         var expected = _reader.Offset + 2;
 
-            var actual = _reader.Offset;
+         _ = parser(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Bind_StartingWith_NonMatch_Is_Failure()
-        {
-            var actual = Bind<char, char>(Atom('A'), a => Empty<char>)(_reader).IsToken;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.False(actual);
-        }
+      [Fact]
+      public void Bind_StartingWith_NonMatch_Is_Failure()
+      {
+         var actual = Bind<char, char>(Atom('A'), a => Empty<char>)(_reader).IsMatch;
 
-        [Fact]
-        public void Bind_StartingWith_NonMatch_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         Assert.False(actual);
+      }
 
-            _ = Bind<char, char>(Atom('A'), a => Empty<char>)(_reader);
+      [Fact]
+      public void Bind_StartingWith_NonMatch_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            var actual = _reader.Offset;
-
-            Assert.Equal(expected, actual);
-        }
+         _ = Bind<char, char>(Atom('A'), a => Empty<char>)(_reader);
 
-        [Fact]
-        public void Bind_NonMatch_AfterMatch_Is_Failure()
-        {
-            var parser = Bind(
-                Atom('a'), 
-                a => Bind<char, char>(
-                    Atom('B'), 
-                    _ => Empty<char>));
-            var actual = parser(_reader).IsToken;
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.False(actual);
-        }
-
-        [Fact]
-        public void Bind_NonMatch_AfterMatch_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void Bind_NonMatch_AfterMatch_Is_Failure()
+      {
+         var parser = Bind(
+             Atom('a'),
+             a => Bind<char, char>(
+                 Atom('B'),
+                 _ => Empty<char>));
+         var actual = parser(_reader).IsMatch;
 
-            _ = Bind(
-                Atom('a'), 
-                a => Bind<char, char>(
-                    Atom('B'), 
-                    _ => Empty<char>))(_reader);
+         Assert.False(actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void Bind_NonMatch_AfterMatch_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         _ = Bind(
+             Atom('a'),
+             a => Bind<char, char>(
+                 Atom('B'),
+                 _ => Empty<char>))(_reader);
 
-    public class ChoiceTests
-    {
-        private readonly TextScanner _reader;
+         var actual = _reader.Offset;
 
-        public ChoiceTests() => _reader = new TextScanner(TestText);
+         Assert.Equal(expected, actual);
+      }
+   }
 
-        [Fact]
-        public void Choice_Matching_EmptyRules_Is_EmptyToken()
-        {
-            var pattern = Array.Empty<Parser<ReadOnlyMemory<char>>>();
-            var parsed = Choice(pattern)(_reader);
+   public class ChoiceTests
+   {
+      private readonly TextScanner _reader;
 
-            Assert.True(parsed.IsToken);
-            Assert.Equal(0, parsed.Length);
-        }
+      public ChoiceTests() => _reader = new TextScanner(TestText);
 
-        [Fact]
-        public void Choice_Matching_Is_Atom()
-        {
-            var pattern = new Parser<ReadOnlyMemory<char>>[] { Atom("abcd"), Atom("0123"), Atom("!@#$") };
-            var parsed = Choice(pattern)(_reader);
+      [Fact]
+      public void Choice_Matching_Is_Atom()
+      {
+         var pattern = new Parser<ReadOnlyMemory<char>>[] { Atom("abcd"), Atom("0123"), Atom("!@#$") };
+         var parsed = Choice(pattern)(_reader);
 
-            Assert.True(parsed.IsToken);
-        }
+         Assert.True(parsed.IsMatch);
+      }
 
-        [Fact]
-        public void Choice_Matching_Does_AdvancesOffset()
-        {
-            var pattern = new Parser<ReadOnlyMemory<char>>[] { Atom("abcd"), Atom("0123"), Atom("!@#$") };
-            var expected = _reader.Offset + 4;
+      [Fact]
+      public void Choice_Matching_Does_AdvancesOffset()
+      {
+         var pattern = new Parser<ReadOnlyMemory<char>>[] { Atom("abcd"), Atom("0123"), Atom("!@#$") };
+         var expected = _reader.Offset + 4;
 
-            _ = Choice(pattern)(_reader);
+         _ = Choice(pattern)(_reader);
 
-            var actual = _reader.Offset;
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Choice_NonMatching_Is_Failure()
-        {
-            var pattern = new Parser<ReadOnlyMemory<char>>[] { Atom("ABCD"), Atom("0123"), Atom("!@#$") };
-            var parsed = Choice(pattern)(_reader);
+      [Fact]
+      public void Choice_NonMatching_Is_Failure()
+      {
+         var pattern = new Parser<ReadOnlyMemory<char>>[] { Atom("ABCD"), Atom("0123"), Atom("!@#$") };
+         var parsed = Choice(pattern)(_reader);
 
-            Assert.False(parsed.IsToken);
-        }
+         Assert.False(parsed.IsMatch);
+      }
 
-        [Fact]
-        public void Choice_NonMatching_DoesNotFollowedBy_AdvancesOffset()
-        {
-            var pattern = new Parser<ReadOnlyMemory<char>>[] { Atom("ABCD"), Atom("0123"), Atom("!@#$") };
-            var expected = _reader.Offset;
+      [Fact]
+      public void Choice_NonMatching_DoesNotFollowedBy_AdvancesOffset()
+      {
+         var pattern = new Parser<ReadOnlyMemory<char>>[] { Atom("ABCD"), Atom("0123"), Atom("!@#$") };
+         var expected = _reader.Offset;
 
-            _ = Choice(pattern)(_reader);
+         _ = Choice(pattern)(_reader);
 
-            var actual = _reader.Offset;
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         Assert.Equal(expected, actual);
+      }
 
-    public class EndOfTextTests
-    {
-        private readonly TextScanner _reader;
+      [Fact]
+      public void Choice_Char_Matching_Is_Atom()
+      {
+         var pattern = new char[] { 'a', 'b', 'c' };
+         var parsed = Choice(pattern)(_reader);
 
-        public EndOfTextTests() => _reader = new TextScanner(TestText);
+         Assert.True(parsed.IsMatch);
+      }
 
-        [Fact]
-        public void EOT_AtEnd_Is_EmptyToken()
-        {
-            _reader.Advance(TestText.Length);
+      [Fact]
+      public void Choice_Char_Matching_Does_AdvancesOffset()
+      {
+         var pattern = new char[] { 'a', 'b', 'c' };
+         var expected = _reader.Offset + 1;
 
-            var parsed = EndOfText(_reader);
+         _ = Choice(pattern)(_reader);
 
-            Assert.True(parsed.IsToken);
-            Assert.Equal(0, parsed.Length);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void EOT_AtEnd_DoesNotFollowedBy_AdvanceOffset()
-        {
-            _reader.Advance(TestText.Length);
+         Assert.Equal(expected, actual);
+      }
 
-            var expected = _reader.Offset;
+      [Fact]
+      public void Choice_Char_NonMatching_Is_Failure()
+      {
+         var pattern = new char[] { 'A', 'B', 'C' };
+         var parsed = Choice(pattern)(_reader);
 
-            _ = EndOfText(_reader);
+         Assert.False(parsed.IsMatch);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void Choice_Char_NonMatching_DoesNotFollowedBy_AdvancesOffset()
+      {
+         var pattern = new char[] { 'A', 'B', 'C' };
+         var expected = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         _ = Choice(pattern)(_reader);
 
-        [Fact]
-        public void EOT_NotFollowedBy_AtEnd_Is_Failure()
-        {
-            var actual = EndOfText(_reader).IsToken;
-            Assert.False(actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void EOT_NotFollowedBy_AtEnd_DoesNotFollowedBy_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         Assert.Equal(expected, actual);
+      }
 
-            _ = EndOfText(_reader);
+      [Fact]
+      public void Choice_Regex_Matching_Is_Atom()
+      {
+         var pattern = new Regex[] { LowercaseLetter, UppercaseLetter };
+         var parsed = Choice(pattern)(_reader);
 
-            var actual = _reader.Offset;
+         Assert.True(parsed.IsMatch);
+      }
 
-            Assert.Equal(expected, actual);
-        }
-    }
+      [Fact]
+      public void Choice_Regex_Matching_Does_AdvancesOffset()
+      {
+         var pattern = new Regex[] { LowercaseLetter, UppercaseLetter };
+         var expected = _reader.Offset + 26;
 
-    public class ExactlyTests
-    {
-        private readonly TextScanner _reader;
+         _ = Choice(pattern)(_reader);
 
-        public ExactlyTests() => _reader = new TextScanner(TestText);
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Exactly_Matching_Zero_Times_Is_EmptyToken()
-        {
-            var parsed = Exactly(0, Parse.Character.LowercaseLetter)(_reader);
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.True(parsed.IsToken);
-            Assert.Equal(0, parsed.Length);
-        }
+      [Fact]
+      public void Choice_Regex_NonMatching_Is_Failure()
+      {
+         var pattern = new Regex[] { Digits, UppercaseLetter };
+         var parsed = Choice(pattern)(_reader);
 
-        [Fact]
-        public void Exactly_Matching_Exact_Count_Is_Atom()
-        {
-            var parsed = Exactly(TestOffset, Parse.Character.LowercaseLetter)(_reader);
+         Assert.False(parsed.IsMatch);
+      }
 
-            Assert.True(parsed.IsToken);
-            Assert.Equal(TestOffset, parsed.Value!.Count);
-        }
+      [Fact]
+      public void Choice_Regex_NonMatching_DoesNotFollowedBy_AdvancesOffset()
+      {
+         var pattern = new Regex[] { Digits, UppercaseLetter };
+         var expected = _reader.Offset;
 
-        [Fact]
-        public void Exactly_Matching_Exact_Count_AdvancesOffset()
-        {
-            var expected = _reader.Offset + TestOffset;
-            var _ = Exactly(TestOffset, Parse.Character.LowercaseLetter)(_reader);
-            var actual = _reader.Offset;
+         _ = Choice(pattern)(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Exactly_Matching_LessThan_Count_Is_Failure()
-        {
-            var parsed = Exactly(TestOffset + 1, Parse.Character.LowercaseLetter)(_reader);
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.False(parsed.IsToken);
-        }
+      [Fact]
+      public void Choice_String_Matching_Is_Atom()
+      {
+         var pattern = new string[] { "abcd", "0123", "!@#$" };
+         var parsed = Choice(pattern)(_reader);
 
-        [Fact]
-        public void Exactly_Matching_LessThan_Count_DoesNotFollowedBy_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
-            var _ = Exactly(TestOffset + 1, Parse.Character.LowercaseLetter)(_reader);
-            var actual = _reader.Offset;
+         Assert.True(parsed.IsMatch);
+      }
 
-            Assert.Equal(expected, actual);
-        }
+      [Fact]
+      public void Choice_String_Matching_Does_AdvancesOffset()
+      {
+         var pattern = new string[] { "abcd", "0123", "!@#$" };
+         var expected = _reader.Offset + 4;
 
-        [Fact]
-        public void Exactly_Matching_Negative_Count_Is_Failure()
-        {
-            var parsed = Exactly(-1, Parse.Character.LowercaseLetter)(_reader);
+         _ = Choice(pattern)(_reader);
 
-            Assert.False(parsed.IsToken);
-        }
-    }
+         var actual = _reader.Offset;
 
-    public class HandleTests
-    {
-        private readonly TextScanner _reader;
+         Assert.Equal(expected, actual);
+      }
 
-        public HandleTests() => _reader = new TextScanner(TestText);
+      [Fact]
+      public void Choice_String_NonMatching_Is_Failure()
+      {
+         var pattern = new string[] { "ABCD", "0123", "!@#$" };
+         var parsed = Choice(pattern)(_reader);
 
-        [Fact]
-        public void Handle_Match_Is_Atom()
-        {
-            var parser = Handle(Atom('a'), Empty<char>);
-            var expected = 'a';
-            var actual = parser(_reader).Value;
+         Assert.False(parsed.IsMatch);
+      }
 
-            Assert.Equal(expected, actual);
-        }
+      [Fact]
+      public void Choice_String_NonMatching_DoesNotFollowedBy_AdvancesOffset()
+      {
+         var pattern = new string[] { "ABCD", "0123", "!@#$" };
+         var expected = _reader.Offset;
 
-        [Fact]
-        public void Handle_Match_AdvancesOffset()
-        {
-            var parser = Handle(Atom('a'), Empty<char>);
-            var expected = _reader.Offset + 1;
+         _ = Choice(pattern)(_reader);
 
-            _ = parser(_reader);
+         var actual = _reader.Offset;
 
-            var actual = _reader.Offset;
+         Assert.Equal(expected, actual);
+      }
+   }
 
-            Assert.Equal(expected, actual);
-        }
+   public class EndOfTextTests
+   {
+      private readonly TextScanner _reader;
 
-        [Fact]
-        public void Handle_NonMatch_To_Empty_Atom_Is_Atom()
-        {
-            var parser = Handle(Atom('A'), Empty<char>);
-            var actual = parser(_reader).IsToken;
+      public EndOfTextTests() => _reader = new TextScanner(TestText);
 
-            Assert.True(actual);
-        }
+      [Fact]
+      public void EOT_AtEnd_Is_EmptyToken()
+      {
+         _reader.Advance(TestText.Length);
 
-        [Fact]
-        public void Handle_NonMatch_To_Empty_Atom_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         var parsed = EndOfText(_reader);
 
-            _ = Handle(Atom('A'), Empty<char>)(_reader);
+         Assert.True(parsed.IsMatch);
+         Assert.Equal(0, parsed.Length);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void EOT_AtEnd_DoesNotFollowedBy_AdvanceOffset()
+      {
+         _reader.Advance(TestText.Length);
 
-            Assert.Equal(expected, actual);
-        }
+         var expected = _reader.Offset;
 
-        [Fact]
-        public void Handle_NonMatch_To_Match_Is_Atom()
-        {
-            var parser = Handle(Atom('A'), Atom('a'));
-            var expected = 'a';
-            var actual = parser(_reader).Value;
+         _ = EndOfText(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Handle_NonMatch_To_Match_Does_AdvanceOffset()
-        {
-            var expected = _reader.Offset + 1;
+         Assert.Equal(expected, actual);
+      }
 
-            _ = Handle(Atom('A'), Atom('a'))(_reader);
+      [Fact]
+      public void EOT_NotFollowedBy_AtEnd_Is_Failure()
+      {
+         var actual = EndOfText(_reader).IsMatch;
+         Assert.False(actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void EOT_NotFollowedBy_AtEnd_DoesNotFollowedBy_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         _ = EndOfText(_reader);
 
-        [Fact]
-        public void Handle_NonMatch_To_NonMatch_Is_Failure()
-        {
-            var parser = Handle(Atom('A'), Atom('B'));
-            var actual = parser(_reader).IsToken;
+         var actual = _reader.Offset;
 
-            Assert.False(actual);
-        }
+         Assert.Equal(expected, actual);
+      }
+   }
 
-        [Fact]
-        public void Handle_NonMatch_To_NonMatch_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+   public class ExactlyTests
+   {
+      private readonly TextScanner _reader;
 
-            _ = Handle(Atom('A'), Atom('B'))(_reader);
+      public ExactlyTests() => _reader = new TextScanner(TestText);
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void Exactly_Matching_Zero_Times_Is_EmptyToken()
+      {
+         var parsed = Exactly(0, Parse.Character.LowercaseLetter)(_reader);
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         Assert.True(parsed.IsMatch);
+         Assert.Equal(0, parsed.Length);
+      }
 
-    public class IfTests
-    {
-        private readonly TextScanner _reader;
+      [Fact]
+      public void Exactly_Matching_Exact_Count_Is_Atom()
+      {
+         var parsed = Exactly(TestOffset, Parse.Character.LowercaseLetter)(_reader);
 
-        public IfTests() => _reader = new TextScanner(TestText);
+         Assert.True(parsed.IsMatch);
+         Assert.Equal(TestOffset, parsed.Value!.Count);
+      }
 
-        [Fact]
-        public void If_True_Match_Is_True_Atom()
-        {
-            var parser = If(Atom('a'), Text.LowercaseLetter, Empty<ReadOnlyMemory<char>>);
-            var expected = "abcdefghijklmnopqrstuvwxyz".AsMemory();
-            var actual = parser(_reader).Value;
+      [Fact]
+      public void Exactly_Matching_Exact_Count_AdvancesOffset()
+      {
+         var expected = _reader.Offset + TestOffset;
+         var _ = Exactly(TestOffset, Parse.Character.LowercaseLetter)(_reader);
+         var actual = _reader.Offset;
 
-            Assert.True(expected.Span.Equals(actual.Span, StringComparison.Ordinal));
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void If_True_Match_AdvancesOffset()
-        {
-            var parser = If(Atom('a'), Text.LowercaseLetter, Text.UppercaseLetter);
-            var expected = _reader.Offset + 26;
+      [Fact]
+      public void Exactly_Matching_LessThan_Count_Is_Failure()
+      {
+         var parsed = Exactly(TestOffset + 1, Parse.Character.LowercaseLetter)(_reader);
 
-            _ = parser(_reader);
+         Assert.False(parsed.IsMatch);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void Exactly_Matching_LessThan_Count_DoesNotFollowedBy_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
+         var _ = Exactly(TestOffset + 1, Parse.Character.LowercaseLetter)(_reader);
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void If_True_NonMatch_Is_False_Atom()
-        {
-            var parser = If(Atom('a'), Text.UppercaseLetter, Text.LowercaseLetter);
-            var actual = parser(_reader);
+      [Fact]
+      public void Exactly_Matching_Negative_Count_Is_Failure()
+      {
+         var parsed = Exactly(-1, Parse.Character.LowercaseLetter)(_reader);
 
-            Assert.False(actual.IsToken);
-        }
+         Assert.False(parsed.IsMatch);
+      }
+   }
 
-        [Fact]
-        public void If_True_NonMatch_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+   public class FailTests
+   {
+      private readonly TextScanner _reader;
 
-            _ = If(Atom('a'), Text.UppercaseLetter, Text.LowercaseLetter);
+      public FailTests() => _reader = new TextScanner(TestText);
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void Fail_Is_Failure()
+      {
+         var parsed = Fail<char>(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.False(parsed.IsMatch);
+      }
 
-        [Fact]
-        public void If_False_Match_Is_False_Atom()
-        {
-            var parser = If(Atom('A'), Text.UppercaseLetter, Text.LowercaseLetter);
-            var expected = "abcdefghijklmnopqrstuvwxyz".AsMemory();
-            var actual = parser(_reader).Value;
+      [Fact]
+      public void Fail_DoesNot_Advance_Offset()
+      {
+         var expected = _reader.Offset;
+         var parsed = Fail<char>(_reader);
+         var actual = _reader.Offset;
 
-            Assert.True(expected.Span.Equals(actual.Span, StringComparison.Ordinal));
-        }
+         Assert.Equal(expected, actual);
+      }
+   }
 
-        [Fact]
-        public void If_False_Match_AdvancesOffset()
-        {
-            var parser = If(Atom('A'), Text.UppercaseLetter, Text.LowercaseLetter);
-            var expected = _reader.Offset + 26;
+   public class IfTests
+   {
+      private readonly TextScanner _reader;
 
-            _ = parser(_reader);
+      public IfTests() => _reader = new TextScanner(TestText);
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void If_True_Match_Is_True_Atom()
+      {
+         var parser = If(Atom('a'), Text.LowercaseLetter, Empty<ReadOnlyMemory<char>>);
+         var expected = "abcdefghijklmnopqrstuvwxyz".AsMemory();
+         var actual = parser(_reader).Value;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.True(expected.Span.Equals(actual.Span, StringComparison.Ordinal));
+      }
 
-        [Fact]
-        public void If_False_NonMatch_Is_False_Atom()
-        {
-            var parser = If(Atom('A'), Text.UppercaseLetter, Text.UppercaseLetter);
-            var actual = parser(_reader);
+      [Fact]
+      public void If_True_Match_AdvancesOffset()
+      {
+         var parser = If(Atom('a'), Text.LowercaseLetter, Text.UppercaseLetter);
+         var expected = _reader.Offset + 26;
 
-            Assert.False(actual.IsToken);
-        }
+         _ = parser(_reader);
 
-        [Fact]
-        public void If_False_NonMatch_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         var actual = _reader.Offset;
 
-            _ = If(Atom('A'), Text.UppercaseLetter, Text.UppercaseLetter);
+         Assert.Equal(expected, actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void If_True_NonMatch_Is_False_Atom()
+      {
+         var parser = If(Atom('a'), Text.UppercaseLetter, Text.LowercaseLetter);
+         var actual = parser(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.False(actual.IsMatch);
+      }
 
-        
-    }
+      [Fact]
+      public void If_True_NonMatch_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-    public class IgnoreCharTests
-    {
-        private readonly TextScanner _reader;
+         _ = If(Atom('a'), Text.UppercaseLetter, Text.LowercaseLetter);
 
-        public IgnoreCharTests() => _reader = new TextScanner(TestText);
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Ignore_Matching_Is_Atom()
-        {
-            var pattern = 'a';
-            var actual = Ignore(pattern)(_reader).IsToken;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.True(actual);
-        }
+      [Fact]
+      public void If_False_Match_Is_False_Atom()
+      {
+         var parser = If(Atom('A'), Text.UppercaseLetter, Text.LowercaseLetter);
+         var expected = "abcdefghijklmnopqrstuvwxyz".AsMemory();
+         var actual = parser(_reader).Value;
 
-        [Fact]
-        public void Ignore_Matching_DoesNot_AdvanceOffset()
-        {
-            var pattern = 'a';
-            var expected = _reader.Offset + 1;
+         Assert.True(expected.Span.Equals(actual.Span, StringComparison.Ordinal));
+      }
 
-            _ = Ignore(pattern)(_reader);
+      [Fact]
+      public void If_False_Match_AdvancesOffset()
+      {
+         var parser = If(Atom('A'), Text.UppercaseLetter, Text.LowercaseLetter);
+         var expected = _reader.Offset + 26;
 
-            var actual = _reader.Offset;
+         _ = parser(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Ignore_NonMatching_Is_Failure()
-        {
-            var pattern = '0';
-            var actual = Ignore(pattern)(_reader).IsToken;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.False(actual);
-        }
+      [Fact]
+      public void If_False_NonMatch_Is_False_Atom()
+      {
+         var parser = If(Atom('A'), Text.UppercaseLetter, Text.UppercaseLetter);
+         var actual = parser(_reader);
 
-        [Fact]
-        public void Ignore_NonMatching_DoesNot_AdvanceOffset()
-        {
-            var pattern = '0';
-            var expected = _reader.Offset;
+         Assert.False(actual.IsMatch);
+      }
 
-            _ = Ignore(pattern)(_reader);
+      [Fact]
+      public void If_False_NonMatch_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            var actual = _reader.Offset;
+         _ = If(Atom('A'), Text.UppercaseLetter, Text.UppercaseLetter);
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         var actual = _reader.Offset;
 
-    public class IgnoreStringTests
-    {
-        private readonly TextScanner _reader;
+         Assert.Equal(expected, actual);
+      }
+   }
 
-        public IgnoreStringTests() => _reader = new TextScanner(TestText);
+   public class IgnoreCharTests
+   {
+      private readonly TextScanner _reader;
 
-        [Fact]
-        public void Ignore_Matching_Is_Atom()
-        {
-            var pattern = "abcd";
-            var actual = Ignore(pattern)(_reader).IsToken;
+      public IgnoreCharTests() => _reader = new TextScanner(TestText);
 
-            Assert.True(actual);
-        }
+      [Fact]
+      public void Ignore_Matching_Is_Atom()
+      {
+         var pattern = 'a';
+         var actual = Ignore(pattern)(_reader).IsMatch;
 
-        [Fact]
-        public void Ignore_Matching_DoesNot_AdvanceOffset()
-        {
-            var pattern = "abcd";
-            var expected = _reader.Offset + 4;
+         Assert.True(actual);
+      }
 
-            _ = Ignore(pattern)(_reader);
+      [Fact]
+      public void Ignore_Matching_DoesNot_AdvanceOffset()
+      {
+         var pattern = 'a';
+         var expected = _reader.Offset + 1;
 
-            var actual = _reader.Offset;
+         _ = Ignore(pattern)(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Ignore_NonMatching_Is_Failure()
-        {
-            var pattern = "0123";
-            var actual = Ignore(pattern)(_reader).IsToken;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.False(actual);
-        }
+      [Fact]
+      public void Ignore_NonMatching_Is_Failure()
+      {
+         var pattern = '0';
+         var actual = Ignore(pattern)(_reader).IsMatch;
 
-        [Fact]
-        public void Ignore_NonMatching_DoesNot_AdvanceOffset()
-        {
-            var pattern = "0123";
-            var expected = _reader.Offset;
+         Assert.False(actual);
+      }
 
-            _ = Ignore(pattern)(_reader);
+      [Fact]
+      public void Ignore_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var pattern = '0';
+         var expected = _reader.Offset;
 
-            var actual = _reader.Offset;
+         _ = Ignore(pattern)(_reader);
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         var actual = _reader.Offset;
 
-    public class IgnoreRegexTests
-    {
-        private readonly TextScanner _reader;
+         Assert.Equal(expected, actual);
+      }
+   }
 
-        public IgnoreRegexTests() => _reader = new TextScanner(TestText);
+   public class IgnoreStringTests
+   {
+      private readonly TextScanner _reader;
 
-        [Fact]
-        public void Ignore_Matching_Is_Atom()
-        {
-            var pattern = LowercaseLetter;
-            var actual = Ignore(pattern)(_reader).IsToken;
+      public IgnoreStringTests() => _reader = new TextScanner(TestText);
 
-            Assert.True(actual);
-        }
+      [Fact]
+      public void Ignore_Matching_Is_Atom()
+      {
+         var pattern = "abcd";
+         var actual = Ignore(pattern)(_reader).IsMatch;
 
-        [Fact]
-        public void Ignore_Matching_AdvancesOffset()
-        {
-            var pattern = LowercaseLetter;
-            var expected = _reader.Offset + 26;
+         Assert.True(actual);
+      }
 
-            _ = Ignore(pattern)(_reader);
+      [Fact]
+      public void Ignore_Matching_DoesNot_AdvanceOffset()
+      {
+         var pattern = "abcd";
+         var expected = _reader.Offset + 4;
 
-            var actual = _reader.Offset;
+         _ = Ignore(pattern)(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Ignore_NonMatching_Is_Failure()
-        {
-            var pattern = UppercaseLetter;
-            var actual = Ignore(pattern)(_reader).IsToken;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.False(actual);
-        }
+      [Fact]
+      public void Ignore_NonMatching_Is_Failure()
+      {
+         var pattern = "0123";
+         var actual = Ignore(pattern)(_reader).IsMatch;
 
-        [Fact]
-        public void Ignore_NonMatching_DoesNot_AdvanceOffset()
-        {
-            var pattern = UppercaseLetter;
-            var expected = _reader.Offset;
+         Assert.False(actual);
+      }
 
-            _ = Ignore(pattern)(_reader);
+      [Fact]
+      public void Ignore_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var pattern = "0123";
+         var expected = _reader.Offset;
 
-            var actual = _reader.Offset;
+         _ = Ignore(pattern)(_reader);
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         var actual = _reader.Offset;
 
-    public class IgnoreParserTests
-    {
-        private readonly TextScanner _reader;
+         Assert.Equal(expected, actual);
+      }
+   }
 
-        public IgnoreParserTests() => _reader = new TextScanner(TestText);
+   public class IgnoreRegexTests
+   {
+      private readonly TextScanner _reader;
 
-        [Fact]
-        public void Ignore_Matching_Is_Atom()
-        {
-            var pattern = Atom("abcd");
-            var actual = Ignore<ReadOnlyMemory<char>>(pattern)(_reader).IsToken;
+      public IgnoreRegexTests() => _reader = new TextScanner(TestText);
 
-            Assert.True(actual);
-        }
+      [Fact]
+      public void Ignore_Matching_Is_Atom()
+      {
+         var pattern = LowercaseLetter;
+         var actual = Ignore(pattern)(_reader).IsMatch;
 
-        [Fact]
-        public void Ignore_Matching_DoesNot_AdvanceOffset()
-        {
-            var pattern = Atom("abcd");
-            var expected = _reader.Offset + 4;
+         Assert.True(actual);
+      }
 
-            _ = Ignore<ReadOnlyMemory<char>>(pattern)(_reader);
+      [Fact]
+      public void Ignore_Matching_AdvancesOffset()
+      {
+         var pattern = LowercaseLetter;
+         var expected = _reader.Offset + 26;
 
-            var actual = _reader.Offset;
+         _ = Ignore(pattern)(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Ignore_NonMatching_Is_Failure()
-        {
-            var pattern = Atom("0123");
-            var actual = Ignore<ReadOnlyMemory<char>>(pattern)(_reader).IsToken;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.False(actual);
-        }
+      [Fact]
+      public void Ignore_NonMatching_Is_Failure()
+      {
+         var pattern = UppercaseLetter;
+         var actual = Ignore(pattern)(_reader).IsMatch;
 
-        [Fact]
-        public void Ignore_NonMatching_DoesNot_AdvanceOffset()
-        {
-            var pattern = Atom("0123");
-            var expected = _reader.Offset;
+         Assert.False(actual);
+      }
 
-            _ = Ignore<ReadOnlyMemory<char>>(pattern)(_reader);
+      [Fact]
+      public void Ignore_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var pattern = UppercaseLetter;
+         var expected = _reader.Offset;
 
-            var actual = _reader.Offset;
+         _ = Ignore(pattern)(_reader);
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         var actual = _reader.Offset;
 
-    public class IslandTests
-    {
-        [Fact]
-        public void Island_Match_Is_Atom()
-        {
-            var reader = new TextScanner("(TEST)");
+         Assert.Equal(expected, actual);
+      }
+   }
 
-            var island = Island(
-                Atom('('),
-                Atom("TEST"),
-                Atom(')'));
+   public class IgnoreParserTests
+   {
+      private readonly TextScanner _reader;
 
-            var actual = island(reader).IsToken;
+      public IgnoreParserTests() => _reader = new TextScanner(TestText);
 
-            Assert.True(actual);
-        }
+      [Fact]
+      public void Ignore_Matching_Is_Atom()
+      {
+         var pattern = Atom("abcd");
+         var actual = Ignore<ReadOnlyMemory<char>>(pattern)(_reader).IsMatch;
 
-        [Fact]
-        public void Island_Match_AdvancesOffset()
-        {
-            var reader = new TextScanner("(TEST)");
+         Assert.True(actual);
+      }
 
-            var island = Island(
-                Atom('('),
-                Atom("TEST"),
-                Atom(')'));
+      [Fact]
+      public void Ignore_Matching_AdvancesOffset()
+      {
+         var pattern = Atom("abcd");
+         var expected = _reader.Offset + 4;
 
-            var expected = reader.Offset + 6;
+         _ = Ignore<ReadOnlyMemory<char>>(pattern)(_reader);
 
-            _ = island(reader);
+         var actual = _reader.Offset;
 
-            var actual = reader.Offset;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.Equal(expected, actual);
-        }
+      [Fact]
+      public void Ignore_NonMatching_Is_Failure()
+      {
+         var pattern = Atom("0123");
+         var actual = Ignore<ReadOnlyMemory<char>>(pattern)(_reader).IsMatch;
 
-        [Fact]
-        public void Island_StartingWith_NonMatch_Is_Failure()
-        {
-            var reader = new TextScanner("TEST)");
+         Assert.False(actual);
+      }
 
-            var island = Island(
-                Atom('('),
-                Atom("TEST"),
-                Atom(')'));
+      [Fact]
+      public void Ignore_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var pattern = Atom("0123");
+         var expected = _reader.Offset;
 
-            var actual = island(reader).IsToken;
+         _ = Ignore<ReadOnlyMemory<char>>(pattern)(_reader);
 
-            Assert.False(actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Island_StartingWith_NonMatch_DoesNot_AdvanceOffset()
-        {
-            var reader = new TextScanner("TEST)");
+         Assert.Equal(expected, actual);
+      }
+   }
 
-            var island = Island(
-                Atom('('),
-                Atom("TEST"),
-            Atom(')'));
+   public class IslandTests
+   {
+      [Fact]
+      public void Island_Match_Is_Atom()
+      {
+         var reader = new TextScanner("(TEST)");
 
-            var expected = reader.Offset;
+         var island = Island(
+             Atom('('),
+             Atom("TEST"),
+             Atom(')'));
 
-            _ = island(reader);
+         var actual = island(reader).IsMatch;
 
-            var actual = reader.Offset;
+         Assert.True(actual);
+      }
 
-            Assert.Equal(expected, actual);
-        }
+      [Fact]
+      public void Island_Match_AdvancesOffset()
+      {
+         var reader = new TextScanner("(TEST)");
 
-        [Fact]
-        public void Island_NonMatch_After_Open_Is_Failure()
-        {
-            var reader = new TextScanner("(EST)");
+         var island = Island(
+             Atom('('),
+             Atom("TEST"),
+             Atom(')'));
 
-            var island = Island(
-                Atom('('),
-                Atom("TEST"),
-                Atom(')'));
+         var expected = reader.Offset + 6;
 
-            var actual = island(reader).IsToken;
+         _ = island(reader);
 
-            Assert.False(actual);
-        }
+         var actual = reader.Offset;
 
-        [Fact]
-        public void Island_NonMatch_After_Open_DoesNot_AdvanceOffset()
-        {
-            var reader = new TextScanner("(EST)");
+         Assert.Equal(expected, actual);
+      }
 
-            var island = Island(
-                Atom('('),
-                Atom("TEST"),
-                Atom(')'));
+      [Fact]
+      public void Island_StartingWith_NonMatch_Is_Failure()
+      {
+         var reader = new TextScanner("TEST)");
 
-            var expected = reader.Offset;
+         var island = Island(
+             Atom('('),
+             Atom("TEST"),
+             Atom(')'));
 
-            _ = island(reader);
+         var actual = island(reader).IsMatch;
 
-            var actual = reader.Offset;
+         Assert.False(actual);
+      }
 
-            Assert.Equal(expected, actual);
-        }
+      [Fact]
+      public void Island_StartingWith_NonMatch_DoesNot_AdvanceOffset()
+      {
+         var reader = new TextScanner("TEST)");
 
-        [Fact]
-        public void Island_EndingWith_NonMatch_Is_Failure()
-        {
-            var reader = new TextScanner("(TEST");
+         var island = Island(
+             Atom('('),
+             Atom("TEST"),
+         Atom(')'));
 
-            var island = Island(
-                Atom('('),
-                Atom("TEST"),
-                Atom(')'));
+         var expected = reader.Offset;
 
-            var actual = island(reader).IsToken;
+         _ = island(reader);
 
-            Assert.False(actual);
-        }
+         var actual = reader.Offset;
 
-        [Fact]
-        public void Island_EndingWith_NonMatch_DoesNot_AdvanceOffset()
-        {
-            var reader = new TextScanner("(TEST");
+         Assert.Equal(expected, actual);
+      }
 
-            var island = Island(
-                Atom('('),
-                Atom("TEST"),
-            Atom(')'));
+      [Fact]
+      public void Island_NonMatch_After_Open_Is_Failure()
+      {
+         var reader = new TextScanner("(EST)");
 
-            var expected = reader.Offset;
+         var island = Island(
+             Atom('('),
+             Atom("TEST"),
+             Atom(')'));
 
-            _ = island(reader);
+         var actual = island(reader).IsMatch;
 
-            var actual = reader.Offset;
+         Assert.False(actual);
+      }
 
-            Assert.Equal(expected, actual);
-        }
-    }
+      [Fact]
+      public void Island_NonMatch_After_Open_DoesNot_AdvanceOffset()
+      {
+         var reader = new TextScanner("(EST)");
 
-    public class JoinTests
-    {
-        private static readonly Parser<ReadOnlyMemory<char>>[] RuleAtoms = new Parser<ReadOnlyMemory<char>>[] {
+         var island = Island(
+             Atom('('),
+             Atom("TEST"),
+             Atom(')'));
+
+         var expected = reader.Offset;
+
+         _ = island(reader);
+
+         var actual = reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Island_EndingWith_NonMatch_Is_Failure()
+      {
+         var reader = new TextScanner("(TEST");
+
+         var island = Island(
+             Atom('('),
+             Atom("TEST"),
+             Atom(')'));
+
+         var actual = island(reader).IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void Island_EndingWith_NonMatch_DoesNot_AdvanceOffset()
+      {
+         var reader = new TextScanner("(TEST");
+
+         var island = Island(
+             Atom('('),
+             Atom("TEST"),
+         Atom(')'));
+
+         var expected = reader.Offset;
+
+         _ = island(reader);
+
+         var actual = reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+   }
+
+   public class JoinTests
+   {
+      private static readonly Parser<ReadOnlyMemory<char>>[] RuleAtoms = new Parser<ReadOnlyMemory<char>>[] {
                 Atom("foo"), Atom("bar"), Atom("baz"), Atom("qux")
             };
 
-        [Fact]
-        public void Join_Separator_EmptyRules_Is_EmptyToken()
-        {
-            var reader = new TextScanner("a b c d");
-            var parse = Join<ReadOnlyMemory<char>, int>(Atom(" "))(reader);
-
-            Assert.True(parse.IsToken);
-            Assert.Equal(0, parse.Length);
-        }
-
-        [Fact]
-        public void Join_Space_MatchingRules_MatchingRule_Is_Atom()
-        {
-            var reader = new TextScanner("foo bar baz qux");
-            var parse = Join(Atom(" "), RuleAtoms)(reader);
-            var actual = parse.IsToken;
-
-            Assert.True(actual);
-        }
-
-        [Fact]
-        public void Join_Space_MatchingRules_MatchingRule_Advances_Offset()
-        {
-            var reader = new TextScanner("foo bar baz qux");
-            var expected = reader.Offset + 15;
-            var _ = Join(Atom(" "), RuleAtoms)(reader);
-            var actual = reader.Offset;
-
-            Assert.Equal(expected, actual);
-        }
-
-        [Fact]
-        public void Join_Space_NonMatchingRules_MatchingRule_Is_Failure()
-        {
-            var reader = new TextScanner("foo baz bar qux");
-            var parse = Join(Atom(" "), RuleAtoms)(reader);
-            var actual = parse.IsToken;
-
-            Assert.False(actual);
-        }
+      [Fact]
+      public void Join_Separator_EmptyRules_Is_EmptyToken()
+      {
+         var reader = new TextScanner("a b c d");
+         var parse = Join<ReadOnlyMemory<char>, int>(Atom(" "))(reader);
+
+         Assert.True(parse.IsMatch);
+         Assert.Equal(0, parse.Length);
+      }
+
+      [Fact]
+      public void Join_Space_MatchingRules_MatchingRule_Is_Atom()
+      {
+         var reader = new TextScanner("foo bar baz qux");
+         var parse = Join(Atom(" "), RuleAtoms)(reader);
+         var actual = parse.IsMatch;
+
+         Assert.True(actual);
+      }
+
+      [Fact]
+      public void Join_Space_MatchingRules_MatchingRule_Advances_Offset()
+      {
+         var reader = new TextScanner("foo bar baz qux");
+         var expected = reader.Offset + 15;
+         var _ = Join(Atom(" "), RuleAtoms)(reader);
+         var actual = reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Join_Space_NonMatchingRules_MatchingRule_Is_Failure()
+      {
+         var reader = new TextScanner("foo baz bar qux");
+         var parse = Join(Atom(" "), RuleAtoms)(reader);
+         var actual = parse.IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void Join_Space_EndingWith_NonMatchingRules_MatchingRule_Is_Failure()
+      {
+         var reader = new TextScanner("foo bar baz quux");
+         var parse = Join(Atom(" "), RuleAtoms)(reader);
+         var actual = parse.IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void Join_Space_MatchingRules_NonMatchingRule_Is_Failure()
+      {
+         var reader = new TextScanner("foobarbazqux");
+         var parse = Join(Atom(" "), RuleAtoms)(reader);
+         var actual = parse.IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void Join_Space_NonMatchingRules_NonMatchingRule_Is_Failure()
+      {
+         var reader = new TextScanner("foobarbazquux");
+         var parse = Join(Atom(" "), RuleAtoms)(reader);
+         var actual = parse.IsMatch;
+
+         Assert.False(actual);
+      }
+   }
+
+   public class MapTests
+   {
+      private readonly TextScanner _reader;
+
+      public MapTests() => _reader = new TextScanner(TestText);
+
+      [Fact]
+      public void Map_Match_Is_Atom()
+      {
+         var parser = Map(Atom('a'), a => (int)a);
+         var expected = (int)'a';
+         var actual = parser(_reader).Value;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Map_Match_AdvancesOffset()
+      {
+         var parser = Map(Atom('a'), a => (int)'a');
+         var expected = _reader.Offset + 1;
+
+         _ = parser(_reader);
 
-        [Fact]
-        public void Join_Space_EndingWith_NonMatchingRules_MatchingRule_Is_Failure()
-        {
-            var reader = new TextScanner("foo bar baz quux");
-            var parse = Join(Atom(" "), RuleAtoms)(reader);
-            var actual = parse.IsToken;
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.False(actual);
-        }
+      [Fact]
+      public void Map_NonMatch_Is_Failure()
+      {
+         var parser = Map(Atom('A'), a => (int)a);
+         var actual = parser(_reader).IsMatch;
 
-        [Fact]
-        public void Join_Space_MatchingRules_NonMatchingRule_Is_Failure()
-        {
-            var reader = new TextScanner("foobarbazqux");
-            var parse = Join(Atom(" "), RuleAtoms)(reader);
-            var actual = parse.IsToken;
+         Assert.False(actual);
+      }
 
-            Assert.False(actual);
-        }
+      [Fact]
+      public void Map_NonMatch_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-        [Fact]
-        public void Join_Space_NonMatchingRules_NonMatchingRule_Is_Failure()
-        {
-            var reader = new TextScanner("foobarbazquux");
-            var parse = Join(Atom(" "), RuleAtoms)(reader);
-            var actual = parse.IsToken;
+         _ = Map(Atom('a'), a => Map(Atom('A'), a => (int)a));
 
-            Assert.False(actual);
-        }
-    }
+         var actual = _reader.Offset;
 
-    public class PositiveLookAheadTests
-    {
-        private readonly TextScanner _reader;
+         Assert.Equal(expected, actual);
+      }
+   }
 
-        public PositiveLookAheadTests() => _reader = new TextScanner(TestText);
+   public class MaximumTests
+   {
+      private readonly TextScanner _reader;
 
-        [Fact]
-        public void IfFollowedBy_Matching_Is_Atom()
-        {
-            var scanner = new TextScanner(_reader.Text);
+      public MaximumTests() => _reader = new TextScanner(TestText);
 
-            var actual = IfFollowedBy(Atom("a"), Atom("b"))(scanner).IsToken;
+      [Fact]
+      public void Maximum_Matching_Zero_Times_Is_EmptyToken()
+      {
+         var parsed = Maximum(0, Parse.Character.LowercaseLetter)(_reader);
 
-            Assert.True(actual);
-        }
+         Assert.True(parsed.IsMatch);
+         Assert.Equal(0, parsed.Length);
+      }
 
-        [Fact]
-        public void IfFollowedBy_Matching_AdvancesOffset()
-        {
-            var scanner = new TextScanner(_reader.Text);
+      [Fact]
+      public void Maximum_Matching_Exactly_Max_Times_Is_Atom()
+      {
+         var actual = Maximum(1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-            var expected = scanner.Offset + 1;
+         Assert.True(actual);
+      }
 
-            _ = IfFollowedBy(Atom("a"), Atom("b"))(scanner);
+      [Fact]
+      public void Maximum_Matching_Exactly_Max_Times_AdvancesOffset()
+      {
+         var expected = _reader.Offset + TestOffset;
 
-            var actual = scanner.Offset;
+         _ = Maximum(TestOffset, Parse.Character.LowercaseLetter)(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void IfFollowedBy_NonMatching_Is_Failure()
-        {
-            var actual = IfFollowedBy(Atom("a"), Atom("B"))(_reader).IsToken;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.False(actual);
-        }
+      [Fact]
+      public void Maximum_Matching_LessThan_Max_Times_Is_Atom()
+      {
+         var actual = Maximum(27, Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-        [Fact]
-        public void IfFollowedBy_NonMatching_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         Assert.True(actual);
+      }
 
-            _ = IfFollowedBy(Atom("a"), Atom("B"))(_reader);
+      [Fact]
+      public void Maximum_Matching_LessThan_Max_Times_AdvancesOffset()
+      {
+         var expected = _reader.Offset + TestOffset;
 
-            var actual = _reader.Offset;
+         _ = Maximum(27, Parse.Character.LowercaseLetter)(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void IfFollowedBy_NonMatching_Start_Is_Failure()
-        {
-            var actual = IfFollowedBy(Atom("A"), Atom("b"))(_reader).IsToken;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.False(actual);
-        }
+      [Fact]
+      public void Maximum_Matching_Negative_Max_Is_Failure()
+      {
+         var actual = Maximum(-1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-        [Fact]
-        public void IfFollowedBy_NonMatching_Start_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         Assert.False(actual);
+      }
 
-            _ = IfFollowedBy(Atom("A"), Atom("b"))(_reader);
+      [Fact]
+      public void Maximum_Matching_Negative_Max_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            var actual = _reader.Offset;
+         _ = Minimum(-1, Parse.Character.LowercaseLetter)(_reader);
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         var actual = _reader.Offset;
 
-    public class PositiveLookBehindTests
-    {
-        private readonly TextScanner _reader;
+         Assert.Equal(expected, actual);
+      }
+   }
 
-        public PositiveLookBehindTests() => _reader = new TextScanner(TestText);
+   public class MinimumTests
+   {
+      private readonly TextScanner _reader;
 
-        [Fact]
-        public void IfPrecededBy_Matching_Is_Atom()
-        {
-            var scanner = new TextScanner(_reader.Text);
-            scanner.Advance(TestOffset);
+      public MinimumTests() => _reader = new TextScanner(TestText);
 
-            var actual = IfPrecededBy(Atom("0123"), Character.LowercaseLetter)(scanner).IsToken;
+      [Fact]
+      public void Minimum_Matching_Zero_Times_Is_EmptyToken()
+      {
+         var parsed = Minimum(0, Parse.Character.UppercaseLetter)(_reader);
 
-            Assert.True(actual);
-        }
+         Assert.True(parsed.IsMatch);
+         Assert.Equal(0, parsed.Length);
+      }
 
-        [Fact]
-        public void IfPrecededBy_Matching_AdvancesOffset()
-        {
-            var scanner = new TextScanner(_reader.Text);
-            scanner.Advance(TestOffset);
+      [Fact]
+      public void Minimum_Matching_Exactly_Min_Times_Is_Atom()
+      {
+         var actual = Minimum(1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-            var expected = scanner.Offset + 4;
+         Assert.True(actual);
+      }
 
-            _ = IfPrecededBy(Atom("0123"), Character.LowercaseLetter)(scanner);
+      [Fact]
+      public void Minimum_Matching_Exactly_Min_Times_AdvancesOffset()
+      {
+         var expected = _reader.Offset + TestOffset;
 
-            var actual = scanner.Offset;
+         _ = Minimum(TestOffset, Parse.Character.LowercaseLetter)(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void IfPrecededBy_NonMatching_Is_Failure()
-        {
-            var scanner = new TextScanner(_reader.Text);
-            scanner.Advance(TestOffset);
+         Assert.Equal(expected, actual);
+      }
 
-            var actual = IfPrecededBy(Atom("0123"), Character.UppercaseLetter)(scanner).IsToken;
+      [Fact]
+      public void Minimum_Matching_LessThan_Min_Times_Is_Failure()
+      {
+         var actual = Minimum(27, Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-            Assert.False(actual);
-        }
+         Assert.False(actual);
+      }
 
-        [Fact]
-        public void IfPrecededBy_NonMatching_DoesNot_AdvanceOffset()
-        {
-            var scanner = new TextScanner(_reader.Text);
-            scanner.Advance(TestOffset);
+      [Fact]
+      public void Minimum_Matching_LessThan_Min_Times_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            var expected = scanner.Offset;
+         _ = Minimum(27, Parse.Character.LowercaseLetter)(_reader);
 
-            _ = IfPrecededBy(Atom("0123"), Character.UppercaseLetter)(scanner);
+         var actual = _reader.Offset;
 
-            var actual = scanner.Offset;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.Equal(expected, actual);
-        }
+      [Fact]
+      public void Minimum_Matching_GreaterThan_Min_Times_Is_Atom()
+      {
+         var actual = Minimum(25, Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-        [Fact]
-        public void IfPrecededBy_NonMatching_Start_Is_Failure()
-        {
-            var actual = IfPrecededBy(Atom("0123"), Character.UppercaseLetter)(_reader).IsToken;
+         Assert.True(actual);
+      }
 
-            Assert.False(actual);
-        }
+      [Fact]
+      public void Minimum_Matching_GreaterThan_Min_Times_AdvancesOffset()
+      {
+         var expected = _reader.Offset + TestOffset;
 
-        [Fact]
-        public void IfPrecededBy_NonMatching_Start_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         _ = Minimum(1, Parse.Character.LowercaseLetter)(_reader);
 
-            _ = IfPrecededBy(Atom("0123"), Character.UppercaseLetter)(_reader);
+         var actual = _reader.Offset;
 
-            var actual = _reader.Offset;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.Equal(expected, actual);
-        }
-    }
+      [Fact]
+      public void Minimum_Matching_Negative_Min_Is_Failure()
+      {
+         var actual = Minimum(-1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-    public class MapTests
-    {
-        private readonly TextScanner _reader;
+         Assert.False(actual);
+      }
 
-        public MapTests() => _reader = new TextScanner(TestText);
+      [Fact]
+      public void Minimum_Matching_Negative_Min_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-        [Fact]
-        public void Map_Match_Is_Atom()
-        {
-            var parser = Map(Atom('a'), a => (int)a);
-            var expected = (int)'a';
-            var actual = parser(_reader).Value;
+         _ = Minimum(-1, Parse.Character.LowercaseLetter)(_reader);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Map_Match_AdvancesOffset()
-        {
-            var parser = Map(Atom('a'), a => (int)'a');
-            var expected = _reader.Offset + 1;
+         Assert.Equal(expected, actual);
+      }
+   }
 
-            _ = parser(_reader);
+   public class NegativeLookAheadTests
+   {
+      private readonly TextScanner _reader;
 
-            var actual = _reader.Offset;
+      public NegativeLookAheadTests() => _reader = new TextScanner(TestText);
 
-            Assert.Equal(expected, actual);
-        }
+      [Fact]
+      public void NotFollowedBy_Matching_Is_Failure()
+      {
+         var actual = NotFollowedBy<char, char>(Atom('a'))(_reader).IsMatch;
 
+         Assert.False(actual);
+      }
 
-        [Fact]
-        public void Map_NonMatch_Is_Failure()
-        {
-            var parser = Map(Atom('A'), a =>(int)a);
-            var actual = parser(_reader).IsToken;
+      [Fact]
+      public void NotFollowedBy_Matching_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            Assert.False(actual);
-        }
+         _ = NotFollowedBy<char, char>(Atom('a'))(_reader);
 
-        [Fact]
-        public void Map_NonMatch_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         var actual = _reader.Offset;
 
-            _ = Map(Atom('a'), a => Map(Atom('A'), a => (int)a));
+         Assert.Equal(expected, actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void NotFollowedBy_NonMatching_Is_Atom()
+      {
+         var actual = NotFollowedBy<char, char>(Atom('A'))(_reader).IsMatch;
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         Assert.True(actual);
+      }
 
-    public class MaximumTests
-    {
-        private readonly TextScanner _reader;
+      [Fact]
+      public void NotFollowedBy_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-        public MaximumTests() => _reader = new TextScanner(TestText);
+         _ = NotFollowedBy<char, char>(Atom('A'))(_reader);
 
-        [Fact]
-        public void Maximum_Matching_Zero_Times_Is_EmptyToken()
-        {
-            var parsed = Maximum(0, Parse.Character.LowercaseLetter)(_reader);
+         var actual = _reader.Offset;
 
-            Assert.True(parsed.IsToken);
-            Assert.Equal(0, parsed.Length);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Maximum_Matching_Exactly_Max_Times_Is_Atom()
-        {
-            var actual = Maximum(1, Parse.Character.LowercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void IfNotFollowedBy_Matching_Is_Failure()
+      {
+         var actual = IfNotFollowedBy(Atom("a"), Atom("b"))(_reader).IsMatch;
 
-            Assert.True(actual);
-        }
+         Assert.False(actual);
+      }
 
-        [Fact]
-        public void Maximum_Matching_Exactly_Max_Times_AdvancesOffset()
-        {
-            var expected = _reader.Offset + TestOffset;
+      [Fact]
+      public void IfNotFollowedBy_Matching_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            _ = Maximum(TestOffset, Parse.Character.LowercaseLetter)(_reader);
+         _ = IfNotFollowedBy(Atom("a"), Atom("b"))(_reader);
 
-            var actual = _reader.Offset;
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Maximum_Matching_LessThan_Max_Times_Is_Atom()
-        {
-            var actual = Maximum(27, Parse.Character.LowercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void IfNotFollowedBy_NonMatching_Is_Atom()
+      {
+         var actual = IfNotFollowedBy(Atom("a"), Atom("B"))(_reader).IsMatch;
 
-            Assert.True(actual);
-        }
+         Assert.True(actual);
+      }
 
-        [Fact]
-        public void Maximum_Matching_LessThan_Max_Times_AdvancesOffset()
-        {
-            var expected = _reader.Offset + TestOffset;
+      [Fact]
+      public void IfNotFollowedBy_NonMatching_AdvancesOffset()
+      {
+         var expected = _reader.Offset + 1;
 
-            _ = Maximum(27, Parse.Character.LowercaseLetter)(_reader);
+         _ = IfNotFollowedBy(Atom("a"), Atom("B"))(_reader);
 
-            var actual = _reader.Offset;
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Maximum_Matching_Negative_Max_Is_Failure()
-        {
-            var actual = Maximum(-1, Parse.Character.LowercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void IfNotFollowedBy_NonMatching_Start_Is_Failure()
+      {
+         var actual = IfNotFollowedBy(Atom("A"), Atom("B"))(_reader).IsMatch;
 
-            Assert.False(actual);
-        }
+         Assert.False(actual);
+      }
 
-        [Fact]
-        public void Maximum_Matching_Negative_Max_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void IfNotFollowedBy_NonMatching_Start_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            _ = Minimum(-1, Parse.Character.LowercaseLetter)(_reader);
+         _ = IfNotFollowedBy(Atom("A"), Atom("B"));
 
-            var actual = _reader.Offset;
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         Assert.Equal(expected, actual);
+      }
+   }
 
-    public class MinimumTests
-    {
-        private readonly TextScanner _reader;
+   public class NegativeLookBehindTests
+   {
+      private readonly TextScanner _reader;
 
-        public MinimumTests() => _reader = new TextScanner(TestText);
+      public NegativeLookBehindTests() => _reader = new TextScanner(TestText);
 
-        [Fact]
-        public void Minimum_Matching_Zero_Times_Is_EmptyToken()
-        {
-            var parsed = Minimum(0, Parse.Character.UppercaseLetter)(_reader);
+      [Fact]
+      public void NotPrecededBy_Matching_Is_Failure()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            Assert.True(parsed.IsToken);
-            Assert.Equal(0, parsed.Length);
-        }
+         var actual = NotPrecededBy<ReadOnlyMemory<char>, char>(Text.LowercaseLetter)(scanner).IsMatch;
 
-        [Fact]
-        public void Minimum_Matching_Exactly_Min_Times_Is_Atom()
-        {
-            var actual = Minimum(1, Parse.Character.LowercaseLetter)(_reader).IsToken;
+         Assert.False(actual);
+      }
 
-            Assert.True(actual);
-        }
+      [Fact]
+      public void NotPrecededBy_Matching_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-        [Fact]
-        public void Minimum_Matching_Exactly_Min_Times_AdvancesOffset()
-        {
-            var expected = _reader.Offset + TestOffset;
+         var expected = scanner.Offset;
 
-            _ = Minimum(TestOffset, Parse.Character.LowercaseLetter)(_reader);
+         _ = NotPrecededBy<ReadOnlyMemory<char>, char>(Text.LowercaseLetter)(scanner);
 
-            var actual = _reader.Offset;
+         var actual = scanner.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Minimum_Matching_LessThan_Min_Times_Is_Failure()
-        {
-            var actual = Minimum(27, Parse.Character.LowercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void NotPrecededBy_OverMatching_Match_Is_Failure()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            Assert.False(actual);
-        }
+         var actual = NotPrecededBy<ReadOnlyMemory<char>, char>(
+            Bind(
+               Atom("xyz"), 
+               _ => Optional(Atom("0123"))
+            ))(scanner).IsMatch;
 
-        [Fact]
-        public void Minimum_Matching_LessThan_Min_Times_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         Assert.False(actual);
+      }
 
-            _ = Minimum(27, Parse.Character.LowercaseLetter)(_reader);
+      [Fact]
+      public void NotPrecededBy_OverMatching_Match_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            var actual = _reader.Offset;
+         var expected = scanner.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         _ = NotPrecededBy<ReadOnlyMemory<char>, char>(
+            Bind(
+               Atom("xyz"),
+               _ => Optional(Atom("0123"))
+            ))(scanner);
 
-        [Fact]
-        public void Minimum_Matching_GreaterThan_Min_Times_Is_Atom()
-        {
-            var actual = Minimum(25, Parse.Character.LowercaseLetter)(_reader).IsToken;
+         var actual = scanner.Offset;
 
-            Assert.True(actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Minimum_Matching_GreaterThan_Min_Times_AdvancesOffset()
-        {
-            var expected = _reader.Offset + TestOffset;
+      [Fact]
+      public void NotPrecededBy_OverMatching_NonMatch_Is_Match()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            _ = Minimum(1, Parse.Character.LowercaseLetter)(_reader);
+         var actual = NotPrecededBy<ReadOnlyMemory<char>, char>(Atom("xyz012"))(scanner).IsMatch;
 
-            var actual = _reader.Offset;
+         Assert.True(actual);
+      }
 
-            Assert.Equal(expected, actual);
-        }
+      [Fact]
+      public void NotPrecededBy_OverMatching_NonMatch_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-        [Fact]
-        public void Minimum_Matching_Negative_Min_Is_Failure()
-        {
-            var actual = Minimum(-1, Parse.Character.LowercaseLetter)(_reader).IsToken;
+         var expected = scanner.Offset;
 
-            Assert.False(actual);
-        }
+         _ = NotPrecededBy<ReadOnlyMemory<char>, char>(Atom("xyz012"))(scanner);
 
-        [Fact]
-        public void Minimum_Matching_Negative_Min_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         var actual = scanner.Offset;
 
-            _ = Minimum(-1, Parse.Character.LowercaseLetter)(_reader);
+         Assert.Equal(expected, actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void NotPrecededBy_NonMatching_Is_Atom()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         var actual = NotPrecededBy<ReadOnlyMemory<char>, char>(Text.UppercaseLetter)(scanner).IsMatch;
 
-    public class NegativeLookBehindTests
-    {
-        private readonly TextScanner _reader;
+         Assert.True(actual);
+      }
 
-        public NegativeLookBehindTests() => _reader = new TextScanner(TestText);
+      [Fact]
+      public void NotPrecededBy_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-        [Fact]
-        public void NotPrecededBy_Matching_Is_Failure()
-        {
-            var scanner = new TextScanner(_reader.Text);
-            scanner.Advance(TestOffset);
+         var expected = scanner.Offset;
 
-            var actual = NotPrecededBy(Atom("0123"), Parse.Character.LowercaseLetter)(scanner).IsToken;
+         _ = NotPrecededBy<ReadOnlyMemory<char>, char>(Text.UppercaseLetter)(scanner);
 
-            Assert.False(actual);
-        }
+         var actual = scanner.Offset;
 
-        [Fact]
-        public void NotPrecededBy_Matching_DoesNot_AdvanceOffset()
-        {
-            var scanner = new TextScanner(_reader.Text);
-            scanner.Advance(TestOffset);
+         Assert.Equal(expected, actual);
+      }
 
-            var expected = scanner.Offset;
+      [Fact]
+      public void IfNotPrecededBy_Matching_Is_Failure()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            _ = NotPrecededBy(Atom("0123"), Parse.Character.LowercaseLetter)(scanner);
+         var actual = IfNotPrecededBy(Atom("0123"), Parse.Character.LowercaseLetter)(scanner).IsMatch;
 
-            var actual = scanner.Offset;
+         Assert.False(actual);
+      }
 
-            Assert.Equal(expected, actual);
-        }
+      [Fact]
+      public void IfNotPrecededBy_Matching_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-        [Fact]
-        public void NotPrecededBy_NonMatching_Is_Atom()
-        {
-            var scanner = new TextScanner(_reader.Text);
-            scanner.Advance(TestOffset);
+         var expected = scanner.Offset;
 
-            var actual = NotPrecededBy(Atom("0123"), Parse.Character.UppercaseLetter)(scanner).IsToken;
+         _ = IfNotPrecededBy(Atom("0123"), Parse.Character.LowercaseLetter)(scanner);
 
-            Assert.True(actual);
-        }
+         var actual = scanner.Offset;
 
-        [Fact]
-        public void NotPrecededBy_NonMatching_AdvancesOffset()
-        {
-            var scanner = new TextScanner(_reader.Text);
-            scanner.Advance(TestOffset);
+         Assert.Equal(expected, actual);
+      }
 
-            var expected = scanner.Offset + 4;
+      [Fact]
+      public void IfNotPrecededBy_OverMatching_Match_Is_Failure()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            _ = NotPrecededBy(Atom("0123"), Parse.Character.UppercaseLetter)(scanner);
+         var actual = IfNotPrecededBy(
+            Atom("0123"),
+            Bind(
+               Atom("xyz"),
+               _ => Optional(Atom("0123"))
+            ))(scanner).IsMatch;
 
-            var actual = scanner.Offset;
+         Assert.False(actual);
+      }
 
-            Assert.Equal(expected, actual);
-        }
+      [Fact]
+      public void IfNotPrecededBy_OverMatching_Match_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-        [Fact]
-        public void NotPrecededBy_NonMatching_Start_Is_Failure()
-        {
-            var actual = NotPrecededBy(Atom("0123"), Parse.Character.LowercaseLetter)(_reader).IsToken;
+         var expected = scanner.Offset;
 
-            Assert.False(actual);
-        }
+         _ = IfNotPrecededBy(
+            Atom("0123"),
+            Bind(
+               Atom("xyz"),
+               _ => Optional(Atom("0123"))
+            ))(scanner);
 
-        [Fact]
-        public void NotPrecededBy_NonMatching_Start_DoesNotPrecededBy_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         var actual = scanner.Offset;
 
-            _ = NotPrecededBy(Atom("0123"), Parse.Character.LowercaseLetter);
+         Assert.Equal(expected, actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void IfNotPrecededBy_OverMatching_NonMatch_Is_Match()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         var actual = IfNotPrecededBy(Atom("0123"), Atom("xyz012"))(scanner).IsMatch;
 
-    public class NegativeLookAheadTests
-    {
-        private readonly TextScanner _reader;
+         Assert.True(actual);
+      }
 
-        public NegativeLookAheadTests() => _reader = new TextScanner(TestText);
+      [Fact]
+      public void IfNotPrecededBy_OverMatching_NonMatch_AdvancesOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-        [Fact]
-        public void NotFollowedBy_Matching_Is_Failure()
-        {
-            var actual = NotFollowedBy(Atom("a"), Atom("b"))(_reader).IsToken;
+         var expected = scanner.Offset + 4;
 
-            Assert.False(actual);
-        }
+         _ = IfNotPrecededBy(Atom("0123"), Atom("xyz012"))(scanner);
 
-        [Fact]
-        public void NotFollowedBy_Matching_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         var actual = scanner.Offset;
 
-            _ = NotFollowedBy(Atom("a"), Atom("b"))(_reader);
+         Assert.Equal(expected, actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void IfNotPrecededBy_NonMatching_Is_Atom()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = IfNotPrecededBy(Atom("0123"), Parse.Character.UppercaseLetter)(scanner).IsMatch;
 
-        [Fact]
-        public void NotFollowedBy_NonMatching_Is_Atom()
-        {
-            var actual = NotFollowedBy(Atom("a"), Atom("B"))(_reader).IsToken;
+         Assert.True(actual);
+      }
 
-            Assert.True(actual);
-        }
+      [Fact]
+      public void IfNotPrecededBy_NonMatching_AdvancesOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-        [Fact]
-        public void NotFollowedBy_NonMatching_AdvancesOffset()
-        {
-            var expected = _reader.Offset + 1;
+         var expected = scanner.Offset + 4;
 
-            _ = NotFollowedBy(Atom("a"), Atom("B"))(_reader);
+         _ = IfNotPrecededBy(Atom("0123"), Parse.Character.UppercaseLetter)(scanner);
 
-            var actual = _reader.Offset;
+         var actual = scanner.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void NotFollowedBy_NonMatching_Start_Is_Failure()
-        {
-            var actual = NotFollowedBy(Atom("A"), Atom("B"))(_reader).IsToken;
+      [Fact]
+      public void IfNotPrecededBy_NonMatching_Start_Is_Failure()
+      {
+         var actual = IfNotPrecededBy(Atom("0123"), Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-            Assert.False(actual);
-        }
+         Assert.False(actual);
+      }
 
-        [Fact]
-        public void NotFollowedBy_NonMatching_Start_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void IfNotPrecededBy_NonMatching_Start_DoesNotPrecededBy_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            _ = NotFollowedBy(Atom("A"), Atom("B"));
+         _ = IfNotPrecededBy(Atom("0123"), Parse.Character.LowercaseLetter);
 
-            var actual = _reader.Offset;
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         Assert.Equal(expected, actual);
+      }
 
-    public class NotExactlyTests
-    {
-        private readonly TextScanner _reader;
+      [Fact]
+      public void IfNotPrecededBy_NonMatching_Assertion_Start_Is_Match()
+      {
+         var actual = IfNotPrecededBy(Atom("abc"), Character.UppercaseLetter)(_reader).IsMatch;
 
-        public NotExactlyTests() => _reader = new TextScanner(TestText);
+         Assert.True(actual);
+      }
 
-        [Fact]
-        public void NotExactly_Matching_LessThan_N_Times_Is_Atom()
-        {
-            var actual = NotExactly(2, Atom('a'))(_reader).IsToken;
+      [Fact]
+      public void IfPrecededBy_NonMatching_Assertion_Start_AdvancesOffset()
+      {
+         var expected = _reader.Offset + 3;
 
-            Assert.True(actual);
-        }
+         _ = IfNotPrecededBy(Atom("abc"), Character.UppercaseLetter)(_reader);
 
-        [Fact]
-        public void NotExactly_Matching_LessThan_N_Times_AdvancesOffset()
-        {
-            var expected = _reader.Offset + 1;
+         var actual = _reader.Offset;
 
-            _ = NotExactly(2, Atom('a'))(_reader);
+         Assert.Equal(expected, actual);
+      }
+   }
 
-            var actual = _reader.Offset;
+   public class NotExactlyTests
+   {
+      private readonly TextScanner _reader;
 
-            Assert.Equal(expected, actual);
-        }
+      public NotExactlyTests() => _reader = new TextScanner(TestText);
 
-        [Fact]
-        public void NotExactly_Matching_Exactly_N_Times_Is_Failure()
-        {
-            var actual = NotExactly(TestOffset, Parse.Character.LowercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void NotExactly_Matching_LessThan_N_Times_Is_Atom()
+      {
+         var actual = NotExactly(2, Atom('a'))(_reader).IsMatch;
 
-            Assert.False(actual);
-        }
+         Assert.True(actual);
+      }
 
-        [Fact]
-        public void NotExactly_Matching_Exactly_N_Times_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void NotExactly_Matching_LessThan_N_Times_AdvancesOffset()
+      {
+         var expected = _reader.Offset + 1;
 
-            _ = NotExactly(TestOffset, Parse.Character.LowercaseLetter)(_reader);
+         _ = NotExactly(2, Atom('a'))(_reader);
 
-            var actual = _reader.Offset;
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void NotExactly_Matching_GreaterThan_N_Times_Is_Atom()
-        {
-            var actual = NotExactly(1, Parse.Character.LowercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void NotExactly_Matching_Exactly_N_Times_Is_Failure()
+      {
+         var actual = NotExactly(TestOffset, Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-            Assert.True(actual);
-        }
+         Assert.False(actual);
+      }
 
-        [Fact]
-        public void NotExactly_Matching_GreaterThan_N_Times_AdvancesOffset()
-        {
-            var expected = _reader.Offset + TestOffset;
+      [Fact]
+      public void NotExactly_Matching_Exactly_N_Times_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            _ = NotExactly(1, Parse.Character.LowercaseLetter)(_reader);
+         _ = NotExactly(TestOffset, Parse.Character.LowercaseLetter)(_reader);
 
-            var actual = _reader.Offset;
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void NotExactly_Full_Match_Is_Atom()
-        {
-            var reader = new TextScanner(TestText[0..TestOffset]);
-            var actual = NotExactly(1, Parse.Character.LowercaseLetter)(reader).IsToken;
+      [Fact]
+      public void NotExactly_Matching_GreaterThan_N_Times_Is_Atom()
+      {
+         var actual = NotExactly(1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-            Assert.True(actual);
-        }
+         Assert.True(actual);
+      }
 
-        [Fact]
-        public void NotExactly_Full_Match_AdvancesOffset()
-        {
-            var reader = new TextScanner(TestText[0..TestOffset]);
-            var expected = reader.Offset + TestOffset;
+      [Fact]
+      public void NotExactly_Matching_GreaterThan_N_Times_AdvancesOffset()
+      {
+         var expected = _reader.Offset + TestOffset;
 
-            _ = NotExactly(1, Parse.Character.LowercaseLetter)(reader);
+         _ = NotExactly(1, Parse.Character.LowercaseLetter)(_reader);
 
-            var actual = reader.Offset;
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void NotExactly_Matching_Negative_N_Is_Failure()
-        {
-            var actual = NotExactly(-1, Parse.Character.LowercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void NotExactly_Full_Match_Is_Atom()
+      {
+         var reader = new TextScanner(TestText[0..TestOffset]);
+         var actual = NotExactly(1, Parse.Character.LowercaseLetter)(reader).IsMatch;
 
-            Assert.False(actual);
-        }
+         Assert.True(actual);
+      }
 
-        [Fact]
-        public void NotExactly_Matching_Negative_N_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void NotExactly_Full_Match_AdvancesOffset()
+      {
+         var reader = new TextScanner(TestText[0..TestOffset]);
+         var expected = reader.Offset + TestOffset;
 
-            _ = NotExactly(-1, Parse.Character.LowercaseLetter)(_reader);
+         _ = NotExactly(1, Parse.Character.LowercaseLetter)(reader);
 
-            var actual = _reader.Offset;
+         var actual = reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         Assert.Equal(expected, actual);
+      }
 
-    public class OptionalTests
-    {
-        private readonly TextScanner _reader;
+      [Fact]
+      public void NotExactly_Matching_Negative_N_Is_Failure()
+      {
+         var actual = NotExactly(-1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-        public OptionalTests() => _reader = new TextScanner(TestText);
+         Assert.False(actual);
+      }
 
-        [Fact]
-        public void Optional_Matching_Is_Atom()
-        {
-            var actual = Optional(Parse.Character.LowercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void NotExactly_Matching_Negative_N_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            Assert.True(actual);
-        }
+         _ = NotExactly(-1, Parse.Character.LowercaseLetter)(_reader);
 
-        [Fact]
-        public void Optional_Matching_AdvancesOffset()
-        {
-            var expected = _reader.Offset + 1;
+         var actual = _reader.Offset;
 
-            _ = Optional(Parse.Character.LowercaseLetter)(_reader);
+         Assert.Equal(expected, actual);
+      }
+   }
 
-            var actual = _reader.Offset;
+   public class OptionalTests
+   {
+      private readonly TextScanner _reader;
 
-            Assert.Equal(expected, actual);
-        }
+      public OptionalTests() => _reader = new TextScanner(TestText);
 
-        [Fact]
-        public void Optional_NonMatching_Is_Atom()
-        {
-            var actual = Optional(Parse.Character.UppercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void Optional_Matching_Is_Atom()
+      {
+         var actual = Optional(Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-            Assert.True(actual);
-        }
+         Assert.True(actual);
+      }
 
-        [Fact]
-        public void Optional_NonMatching_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void Optional_Matching_AdvancesOffset()
+      {
+         var expected = _reader.Offset + 1;
 
-            _ = Optional(Parse.Character.UppercaseLetter)(_reader);
+         _ = Optional(Parse.Character.LowercaseLetter)(_reader);
 
-            var actual = _reader.Offset;
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         Assert.Equal(expected, actual);
+      }
 
-    public class OrTests
-    {
-        private readonly TextScanner _reader;
+      [Fact]
+      public void Optional_NonMatching_Is_Atom()
+      {
+         var actual = Optional(Parse.Character.UppercaseLetter)(_reader).IsMatch;
 
-        public OrTests() => _reader = new TextScanner(TestText);
+         Assert.True(actual);
+      }
 
-        [Fact]
-        public void Or_Match_First_Is_Atom()
-        {
-            var parser = Or(Atom('a'), Atom('A'));
+      [Fact]
+      public void Optional_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            var actual = parser(_reader).IsToken;
+         _ = Optional(Parse.Character.UppercaseLetter)(_reader);
 
-            Assert.True(actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void Or_Match_First_AdvancesOffset()
-        {
-            var expected = _reader.Offset + 1;
-            var parser = Or(Atom('a'), Atom('A'));
+         Assert.Equal(expected, actual);
+      }
+   }
 
-            _ = parser(_reader);
+   public class OrTests
+   {
+      private readonly TextScanner _reader;
 
-            var actual = _reader.Offset;
+      public OrTests() => _reader = new TextScanner(TestText);
 
-            Assert.Equal(expected, actual);
-        }
+      [Fact]
+      public void Or_Match_First_Is_Atom()
+      {
+         var parser = Or(Atom('a'), Atom('A'));
 
-        [Fact]
-        public void Or_Match_Second_Is_Atom()
-        {
-            var parser = Or(Atom('A'), Atom('a'));
+         var actual = parser(_reader).IsMatch;
 
-            var actual = parser(_reader).IsToken;
+         Assert.True(actual);
+      }
 
-            Assert.True(actual);
-        }
+      [Fact]
+      public void Or_Match_First_AdvancesOffset()
+      {
+         var expected = _reader.Offset + 1;
+         var parser = Or(Atom('a'), Atom('A'));
 
-        [Fact]
-        public void Or_Match_Second_AdvancesOffset()
-        {
-            var expected = _reader.Offset + 1;
-            var parser = Or(Atom('A'), Atom('a'));
+         _ = parser(_reader);
 
-            _ = parser(_reader);
+         var actual = _reader.Offset;
 
-            var actual = _reader.Offset;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.Equal(expected, actual);
-        }
+      [Fact]
+      public void Or_Match_Second_Is_Atom()
+      {
+         var parser = Or(Atom('A'), Atom('a'));
 
-        [Fact]
-        public void Or_Match_Both_Is_Atom()
-        {
-            var parser = Or(Atom('a'), Atom('b'));
+         var actual = parser(_reader).IsMatch;
 
-            var actual = parser(_reader).IsToken;
+         Assert.True(actual);
+      }
 
-            Assert.True(actual);
-        }
+      [Fact]
+      public void Or_Match_Second_AdvancesOffset()
+      {
+         var expected = _reader.Offset + 1;
+         var parser = Or(Atom('A'), Atom('a'));
 
-        [Fact]
-        public void Or_Match_Both_AdvancesOffset()
-        {
-            var expected = _reader.Offset + 2;
-            var parser = Or(Atom('a'), Atom('b'));
+         _ = parser(_reader);
 
-            _ = parser(_reader);
-            var actual = _reader.Offset;
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Or_Match_None_Is_Failure()
-        {
-            var actual = Or(Atom('A'), Atom('B'))(_reader).IsToken;
+      [Fact]
+      public void Or_Match_Both_Is_Atom()
+      {
+         var parser = Or(Atom('a'), Atom('b'));
 
-            Assert.False(actual);
-        }
+         var actual = parser(_reader).IsMatch;
 
-        [Fact]
-        public void Or_Match_None_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         Assert.True(actual);
+      }
 
-            _ = Or(Atom('A'), Atom('B'))(_reader);
+      [Fact]
+      public void Or_Match_Both_AdvancesOffset()
+      {
+         var expected = _reader.Offset + 2;
+         var parser = Or(Atom('a'), Atom('b'));
 
-            var actual = _reader.Offset;
+         _ = parser(_reader);
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         Assert.Equal(expected, actual);
+      }
 
-    public class RangeTests
-    {
-        private readonly TextScanner _reader;
+      [Fact]
+      public void Or_Match_None_Is_Failure()
+      {
+         var actual = Or(Atom('A'), Atom('B'))(_reader).IsMatch;
 
-        public RangeTests() => _reader = new TextScanner(TestText);
+         Assert.False(actual);
+      }
 
-        [Fact]
-        public void Range_Matching_Zero_Times_Is_EmptyToken()
-        {
-            var actual = Range(0, 0, Parse.Character.LowercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void Or_Match_None_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            Assert.True(actual);
-        }
+         _ = Or(Atom('A'), Atom('B'))(_reader);
 
-        [Fact]
-        public void Range_Matching_AtLeast_Min_Times_Is_Atom()
-        {
-            var actual = Range(1, 26, Parse.Character.LowercaseLetter)(_reader).IsToken;
+         var actual = _reader.Offset;
 
-            Assert.True(actual);
-        }
+         Assert.Equal(expected, actual);
+      }
+   }
 
-        [Fact]
-        public void Range_Matching_AtLeast_Min_Times_AdvancesOffset()
-        {
-            var expected = _reader.Offset + TestOffset;
+   public class PackratParserTests
+   {
+      private static readonly Parser<double> LRParser =
+         Memoize(Choice(
+            from left in Ref(() => LRParser!)
+            from _ in Atom('-')
+            from right in Text.Number
+            select left - double.Parse(right.Span),
+            
+            from d in Text.Number
+            select double.Parse(d.Span)));
 
-            _ = Range(1, 27, Parse.Character.LowercaseLetter)(_reader);
+      private static readonly Parser<double> ILRParserA =
+         Memoize(Ref(() => ILRParserB!));
 
-            var actual = _reader.Offset;
+      private static readonly Parser<double> ILRParserB =
+         Choice(
+            from left in ILRParserA
+            from _ in Atom('-')
+            from right in Text.Number
+            select left - double.Parse(right.Span),
 
-            Assert.Equal(expected, actual);
-        }
+            from d in Text.Number
+            select double.Parse(d.Span));
 
-        [Fact]
-        public void Range_Matching_LessThan_Min_Times_Is_Failure()
-        {
-            var actual = Range(27, 27, Parse.Character.LowercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void Left_Recursive_Matching_Is_Match()
+      {
+         var scanner = new TextScanner("1-2-3");
+         var expected = -4.0;
+         var parsed = LRParser(scanner);
 
-            Assert.False(actual);
-        }
+         Assert.True(parsed.IsMatch);
+         Assert.Equal(expected, parsed.Value);
+      }
 
-        [Fact]
-        public void Range_Matching_LessThan_Min_Times_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void Left_Recursive_Matching_AdvancesOffset()
+      {
+         var scanner = new TextScanner("1-2-3");
+         var expected = scanner.Offset + scanner.Length;
+         _ = LRParser(scanner);
+         var actual = scanner.Offset;
 
-            _ = Range(27, 27, Parse.Character.LowercaseLetter)(_reader);
+         Assert.Equal(expected, actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void Left_Recursive_Partial_Matching_Is_Match()
+      {
+         var scanner = new TextScanner("1+2-3");
+         var expected = 1.0;
+         var parsed = LRParser(scanner);
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.True(parsed.IsMatch);
+         Assert.Equal(expected, parsed.Value);
+      }
 
-        [Fact]
-        public void Range_Matching_Negative_Count_Is_Failure()
-        {
-            var actual = Range(-1, 26, Parse.Character.LowercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void Left_Recursive_Partial_Matching_AdvancesOffset()
+      {
+         var scanner = new TextScanner("1+2-3");
+         var expected = scanner.Offset + 1;
+         _ = LRParser(scanner);
+         var actual = scanner.Offset;
 
-            Assert.False(actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Range_Matching_Negative_Count_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void Left_Recursive_NonMatching_Is_Failure()
+      {
+         var scanner = new TextScanner("a-b-c");
+         var parsed = LRParser(scanner);
 
-            _ = Range(-1, 26, Parse.Character.LowercaseLetter)(_reader);
+         Assert.False(parsed.IsMatch);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void Left_Recursive_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner("a-b-c");
+         var expected = scanner.Offset;
+         _ = LRParser(scanner);
+         var actual = scanner.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Range_Matching_Max_LessThan_Min_Is_Failure()
-        {
-            var actual = Range(26, 1, Parse.Character.LowercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void Indirect_Left_Recursive_Matching_Is_Match()
+      {
+         var scanner = new TextScanner("1-2-3");
+         var expected = -4.0;
+         var parsed = ILRParserA(scanner);
 
-            Assert.False(actual);
-        }
+         Assert.True(parsed.IsMatch);
+         Assert.Equal(expected, parsed.Value);
+      }
 
-        [Fact]
-        public void Range_Matching_Max_LessThan_Min_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void Indirect_Left_Recursive_Matching_AdvancesOffset()
+      {
+         var scanner = new TextScanner("1-2-3");
+         var expected = scanner.Offset + scanner.Length;
+         _ = ILRParserA(scanner);
+         var actual = scanner.Offset;
 
-            _ = Range(26, 1, Parse.Character.LowercaseLetter)(_reader);
+         Assert.Equal(expected, actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void Indirect_Left_Recursive_Partial_Matching_Is_Match()
+      {
+         var scanner = new TextScanner("1+2-3");
+         var expected = 1.0;
+         var parsed = ILRParserA(scanner);
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         Assert.True(parsed.IsMatch);
+         Assert.Equal(expected, parsed.Value);
+      }
 
-    public class SatisfiesTests
-    {
-        private static readonly Predicate<char> CharIsA = c => c == 'a';
-        private static readonly Predicate<char> CharIsB = c => c == 'b';
+      [Fact]
+      public void Indirect_Left_Recursive_Partial_Matching_AdvancesOffset()
+      {
+         var scanner = new TextScanner("1+2-3");
+         var expected = scanner.Offset + 1;
+         _ = ILRParserA(scanner);
+         var actual = scanner.Offset;
 
-        private readonly TextScanner _reader;
+         Assert.Equal(expected, actual);
+      }
 
-        public SatisfiesTests() => _reader = new TextScanner(TestText);
+      [Fact]
+      public void Indirect_Left_Recursive_NonMatching_Is_Failure()
+      {
+         var scanner = new TextScanner("a-b-c");
+         var parsed = ILRParserA(scanner);
 
-        [Fact]
-        public void Satisfies_Matching_Passes_Test_Is_Atom()
-        {
-            var parse = Satisfies(Atom('a'), CharIsA)(_reader);
-            var success = parse.IsToken;
+         Assert.False(parsed.IsMatch);
+      }
 
-            Assert.True(success);
-        }
+      [Fact]
+      public void Indirect_Left_Recursive_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner("a-b-c");
+         var expected = scanner.Offset;
+         _ = ILRParserA(scanner);
+         var actual = scanner.Offset;
 
-        [Fact]
-        public void Satisfies_Matching_Passes_Test_AdvancesOffset()
-        {
-            var expected = _reader.Offset + 1;
+         Assert.Equal(expected, actual);
+      }
 
-            _ = Satisfies(Atom('a'), CharIsA)(_reader);
+   }
 
-            var actual = _reader.Offset;
+   public class PeekParserTests
+   {
+      private readonly TextScanner _reader;
 
-            Assert.Equal(expected, actual);
-        }
+      public PeekParserTests() => _reader = new TextScanner(TestText);
 
-        [Fact]
-        public void Satisfies_Matching_Fails_Test_Is_Failure()
-        {
-            var actual = Satisfies(Atom('a'), CharIsB)(_reader).IsToken;
+      [Fact]
+      public void Peek_Matching_Is_Atom()
+      {
+         var pattern = Atom("abcd");
+         var actual = Peek(pattern)(_reader).IsMatch;
 
-            Assert.False(actual);
-        }
+         Assert.True(actual);
+      }
 
-        [Fact]
-        public void Satisfies_Matching_Fails_Test_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void Peek_Matching_DoesNot_AdvanceOffset()
+      {
+         var pattern = Atom("abcd");
+         var expected = _reader.Offset;
 
-            _ = Satisfies(Atom('a'), CharIsB)(_reader);
+         _ = Peek(pattern)(_reader);
 
-            var actual = _reader.Offset;
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Satisfies_NonMatching_Is_Failure()
-        {
-            var actual = Satisfies(Atom('A'), CharIsA)(_reader).IsToken;
+      [Fact]
+      public void Peek_NonMatching_Is_Failure()
+      {
+         var pattern = Atom("0123");
+         var actual = Peek(pattern)(_reader).IsMatch;
 
-            Assert.False(actual);
-        }
+         Assert.False(actual);
+      }
 
-        [Fact]
-        public void Satisfies_NonMatching_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void Peek_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var pattern = Atom("0123");
+         var expected = _reader.Offset;
 
-            _ = Satisfies(Atom('A'), CharIsA)(_reader);
+         _ = Peek(pattern)(_reader);
 
-            var actual = _reader.Offset;
+         var actual = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         Assert.Equal(expected, actual);
+      }
+   }
 
-    public class SplitTests
-    {
-        [Fact]
-        public void Split_MatchingRules_Is_Atom()
-        {
-            var reader = new TextScanner("abba abba abba abba");
-            var parse = SeparatedBy(Atom("abba"), Atom(" "))(reader);
-            var actual = parse.IsToken;
+   public class PositiveLookAheadTests
+   {
+      private readonly TextScanner _reader;
 
-            Assert.True(actual);
-        }
+      public PositiveLookAheadTests() => _reader = new TextScanner(TestText);
 
-        [Fact]
-        public void Split_MatchingRules_Advances_Offset()
-        {
-            var reader = new TextScanner("abba abba abba abba");
-            var expected = reader.Offset + 19;
-            _ = SeparatedBy(Atom("abba"), Atom(" "))(reader);
-            var actual = reader.Offset;
+      [Fact]
+      public void FollowedBy_Matching_Is_Atom()
+      {
+         var scanner = new TextScanner(_reader.Text);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = FollowedBy<char, char>(Atom('a'))(scanner).IsMatch;
 
-        [Fact]
-        public void Split_NonMatchingRule_Is_Atom()
-        {
-            var reader = new TextScanner("abba baab abba abba");
-            var parse = SeparatedBy(Atom("abba"), Atom(" "))(reader);
-            var actual = parse.IsToken;
+         Assert.True(actual);
+      }
 
-            Assert.True(actual);
-        }
+      [Fact]
+      public void FollowedBy_Matching_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
 
-        [Fact]
-        public void Split_StartingWith_NonMatchingRule_Is_Failure()
-        {
-            var reader = new TextScanner("baab abba abba abba");
-            var parse = SeparatedBy(Atom("abba"), Atom(" "))(reader);
-            var actual = parse.IsToken;
+         var expected = scanner.Offset;
 
-            Assert.False(actual);
-        }
+         _ = FollowedBy<char, char>(Atom('a'))(scanner);
 
-        [Fact]
-        public void Split_NonMatchingSeparator_Is_Atom()
-        {
-            var reader = new TextScanner("abbaabbaabbaabba");
-            var parse = SeparatedBy(Atom("abba"), Atom(" "))(reader);
-            var actual = parse.IsToken;
+         var actual = scanner.Offset;
 
-            Assert.True(actual);
-        }
-    }
+         Assert.Equal(expected, actual);
+      }
 
-    public class StartOfTextTests
-    {
-        private readonly TextScanner _reader;
+      [Fact]
+      public void FollowedBy_NonMatching_Is_Failure()
+      {
+         var actual = FollowedBy<char, char>(Atom('A'))(_reader).IsMatch;
 
-        public StartOfTextTests() => _reader = new TextScanner(TestText);
+         Assert.False(actual);
+      }
 
-        [Fact]
-        public void SOT_AtBeginning_Is_EmptyToken()
-        {
-            var parsed = StartOfText(_reader);
+      [Fact]
+      public void FollowedBy_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            Assert.True(parsed.IsToken);
-            Assert.Equal(0, parsed.Length);
-        }
+         _ = FollowedBy<char, char>(Atom('A'))(_reader);
 
-        [Fact]
-        public void SOT_AtBeginning_DoesNotFollowedBy_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         var actual = _reader.Offset;
 
-            _ = StartOfText(_reader);
+         Assert.Equal(expected, actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void FollowedBy_NonMatching_Start_Is_Failure()
+      {
+         var actual = FollowedBy<char, char>(Atom('A'))(_reader).IsMatch;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.False(actual);
+      }
 
-        [Fact]
-        public void SOT_NotFollowedBy_AtBeginning_Is_Failure()
-        {
-            _reader.Advance();
+      [Fact]
+      public void FollowedBy_NonMatching_Start_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            var actual = StartOfText(_reader).IsToken;
+         _ = FollowedBy<char, char>(Atom('A'))(_reader);
 
-            Assert.False(actual);
-        }
+         var actual = _reader.Offset;
 
-        [Fact]
-        public void SOT_NotFollowedBy_AtEnd_DoesNotFollowedBy_AdvanceOffset()
-        {
-            _reader.Advance();
+         Assert.Equal(expected, actual);
+      }
 
-            var expected = _reader.Offset;
+      [Fact]
+      public void IfFollowedBy_Matching_Is_Atom()
+      {
+         var scanner = new TextScanner(_reader.Text);
 
-            _ = StartOfText(_reader);
+         var actual = IfFollowedBy(Atom("a"), Atom("b"))(scanner).IsMatch;
 
-            var actual = _reader.Offset;
+         Assert.True(actual);
+      }
 
-            Assert.Equal(expected, actual);
-        }
-    }
+      [Fact]
+      public void IfFollowedBy_Matching_AdvancesOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
 
-    public class AtomTests
-    {
-        private readonly TextScanner _reader;
+         var expected = scanner.Offset + 1;
 
-        public AtomTests() => _reader = new TextScanner(TestText);
+         _ = IfFollowedBy(Atom("a"), Atom("b"))(scanner);
 
-        [Fact]
-        public void Atom_Matching_Char_Is_Atom()
-        {
-            var actual = Atom('a')(_reader).IsToken;
+         var actual = scanner.Offset;
 
-            Assert.True(actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Atom_Matching_Char_AdvancesOffset()
-        {
-            var expected = _reader.Offset + 1;
+      [Fact]
+      public void IfFollowedBy_NonMatching_Is_Failure()
+      {
+         var actual = IfFollowedBy(Atom("a"), Atom("B"))(_reader).IsMatch;
 
-            _ = Atom('a')(_reader);
+         Assert.False(actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void IfFollowedBy_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         _ = IfFollowedBy(Atom("a"), Atom("B"))(_reader);
 
-        [Fact]
-        public void Atom_NonMatching_Char_Is_Failure()
-        {
-            var actual = Atom('0')(_reader).IsToken;
+         var actual = _reader.Offset;
 
-            Assert.False(actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Atom_NonMatching_Char_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void IfFollowedBy_NonMatching_Start_Is_Failure()
+      {
+         var actual = IfFollowedBy(Atom("A"), Atom("b"))(_reader).IsMatch;
 
-            _ = Atom('0')(_reader);
+         Assert.False(actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void IfFollowedBy_NonMatching_Start_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         _ = IfFollowedBy(Atom("A"), Atom("b"))(_reader);
 
-        [Fact]
-        public void Atom_Matching_String_Is_Atom()
-        {
-            var actual = Atom("abcd")(_reader).IsToken;
+         var actual = _reader.Offset;
 
-            Assert.True(actual);
-        }
+         Assert.Equal(expected, actual);
+      }
+   }
 
-        [Fact]
-        public void Atom_Matching_String_AdvancesOffset()
-        {
-            var expected = _reader.Offset + 4;
+   public class PositiveLookBehindTests
+   {
+      private readonly TextScanner _reader;
 
-            _ = Atom("abcd")(_reader);
+      public PositiveLookBehindTests() => _reader = new TextScanner(TestText);
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void PrecededBy_Matching_Is_Atom()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = PrecededBy<ReadOnlyMemory<char>, char>(Text.LowercaseLetter)(scanner).IsMatch;
 
-        [Fact]
-        public void Atom_NonMatching_String_Is_Failure()
-        {
-            var actual = Atom("0123")(_reader).IsToken;
+         Assert.True(actual);
+      }
 
-            Assert.False(actual);
-        }
+      [Fact]
+      public void PrecededBy_Matching_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-        [Fact]
-        public void Atom_NonMatching_String_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         var expected = scanner.Offset;
 
-            _ = Atom("0123")(_reader);
+         _ = PrecededBy<ReadOnlyMemory<char>, char>(Text.LowercaseLetter)(scanner);
 
-            var actual = _reader.Offset;
+         var actual = scanner.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Atom_Matching_Regex_Is_Atom()
-        {
-            var actual = Parse.Character.LowercaseLetter(_reader).IsToken;
+      [Fact]
+      public void PrecededBy_OverMatching_Match_Is_Match()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            Assert.True(actual);
-        }
+         var actual = PrecededBy<ReadOnlyMemory<char>, char>(
+            Bind(
+               Atom("xyz"),
+               _ => Optional(Atom("0123"))
+            ))(scanner).IsMatch;
 
-        [Fact]
-        public void Atom_Matching_Regex_AdvancesOffset()
-        {
-            var expected = _reader.Offset + 1;
+         Assert.True(actual);
+      }
 
-            _ = Parse.Character.LowercaseLetter(_reader);
+      [Fact]
+      public void PrecededBy_OverMatching_Match_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            var actual = _reader.Offset;
+         var expected = scanner.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         _ = PrecededBy<ReadOnlyMemory<char>, char>(
+            Bind(
+               Atom("xyz"),
+               _ => Optional(Atom("0123"))
+            ))(scanner);
 
-        [Fact]
-        public void Atom_NonMatching_Regex_Is_Failure()
-        {
-            var actual = Parse.Character.UppercaseLetter(_reader).IsToken;
+         var actual = scanner.Offset;
 
-            Assert.False(actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void Atom_NonMatching_Regex_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void PrecededBy_OverMatching_NonMatch_Is_Failure()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            _ = Parse.Character.UppercaseLetter(_reader);
+         var actual = PrecededBy<ReadOnlyMemory<char>, char>(Atom("xyz012"))(scanner).IsMatch;
 
-            var actual = _reader.Offset;
+         Assert.False(actual);
+      }
 
-            Assert.Equal(expected, actual);
-        }
-    }
+      [Fact]
+      public void PrecededBy_OverMatching_NonMatch_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-    public class TryBindTests
-    {
-        private readonly TextScanner _reader;
+         var expected = scanner.Offset;
 
-        public TryBindTests() => _reader = new TextScanner(TestText);
+         _ = PrecededBy<ReadOnlyMemory<char>, char>(Atom("xyz012"))(scanner);
 
-        [Fact]
-        public void TryBind_Match_Is_Atom()
-        {
-            var parser = TryBind<char, char>(Atom('a'), a => Empty<char>);
+         var actual = scanner.Offset;
 
-            var actual = parser(_reader).IsToken;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.True(actual);
-        }
+      [Fact]
+      public void PrecededBy_NonMatching_Is_Failure()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-        [Fact]
-        public void TryBind_Match_AdvancesOffset()
-        {
-            var parser = TryBind<char, char>(Atom('a'), a => Empty<char>);
-            var expected = _reader.Offset + 1;
+         var actual = PrecededBy<ReadOnlyMemory<char>, char>(Text.UppercaseLetter)(scanner).IsMatch;
 
-            _ = parser(_reader);
+         Assert.False(actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void PrecededBy_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            Assert.Equal(expected, actual);
-        }
+         var expected = scanner.Offset;
 
-        [Fact]
-        public void TryBind_Match_NoRead_Is_Atom()
-        {
-            var parser = TryBind<char, char>(Ignore('a'), a => Empty<char>); ;
+         _ = PrecededBy<ReadOnlyMemory<char>, char>(Text.UppercaseLetter)(scanner);
 
-            var actual = parser(_reader).IsToken;
+         var actual = scanner.Offset;
 
-            Assert.True(actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void TryBind_Match_NoRead_AdvancesOffset()
-        {
-            var parser = TryBind<char, char>(Ignore('a'), a => Empty<char>);
-            var expected = _reader.Offset + 1;
+      [Fact]
+      public void PrecededBy_NonMatching_Start_Is_Failure()
+      {
+         var actual = PrecededBy<ReadOnlyMemory<char>, char>(Text.UppercaseLetter)(_reader).IsMatch;
 
-            _ = parser(_reader);
+         Assert.False(actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void PrecededBy_NonMatching_Start_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            Assert.Equal(expected, actual);
-        }
+         _ = PrecededBy<ReadOnlyMemory<char>, char>(Text.UppercaseLetter)(_reader);
 
-        [Fact]
-        public void TryBind_Match_ReadFirstMatchOnly_Is_Atom()
-        {
-            var parser = TryBind(
-                Atom('a'), 
-                a => TryBind<char, char>(
-                    Ignore('b'), 
-                    _ => Empty<char>));
+         var actual = _reader.Offset;
 
-            var parse = parser(_reader);
-            var actual = parse.IsToken;
+         Assert.Equal(expected, actual);
+      }
 
-            Assert.True(actual);
-        }
+      [Fact]
+      public void IfPrecededBy_Matching_Is_Atom()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-        [Fact]
-        public void TryBind_Match_ReadFirstMatchOnly_AdvancesOffset()
-        {
-            var parser = TryBind(
-                Atom('a'), 
-                a => TryBind<char, char>(
-                    Ignore('b'), 
-                    _ => Empty<char>));
+         var actual = IfPrecededBy(Atom("0123"), Character.LowercaseLetter)(scanner).IsMatch;
 
-            var expected = _reader.Offset + 2;
+         Assert.True(actual);
+      }
 
-            _ = parser(_reader);
+      [Fact]
+      public void IfPrecededBy_Matching_AdvancesOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            var actual = _reader.Offset;
+         var expected = scanner.Offset + 4;
 
-            Assert.Equal(expected, actual);
-        }
+         _ = IfPrecededBy(Atom("0123"), Character.LowercaseLetter)(scanner);
 
-        [Fact]
-        public void TryBind_StartingWith_NonMatch_Is_Failure()
-        {
-            var actual = TryBind<char, char>(Atom('A'), a => Empty<char>)(_reader).IsToken;
+         var actual = scanner.Offset;
 
-            Assert.False(actual);
-        }
+         Assert.Equal(expected, actual);
+      }
 
-        [Fact]
-        public void TryBind_StartingWith_NonMatch_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+      [Fact]
+      public void IfPrecededBy_OverMatching_Match_Is_Match()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            _ = TryBind<char, char>(Atom('A'), a => Empty<char>)(_reader);
+         var actual = IfPrecededBy(
+            Atom("0123"),
+            Bind(
+               Atom("xyz"),
+               _ => Optional(Atom("0123"))
+            ))(scanner).IsMatch;
 
-            var actual = _reader.Offset;
+         Assert.True(actual);
+      }
 
-            Assert.Equal(expected, actual);
-        }
+      [Fact]
+      public void IfPrecededBy_OverMatching_Match_AdvancesOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-        [Fact]
-        public void TryBind_NonMatch_AfterMatch_Is_Atom()
-        {
-            var parser = TryBind(Atom('a'), a => Bind<char, char>(Ignore('B'), _ => Empty<char>));
-            var parse = parser(_reader);
-            var actual = parse.IsToken;
+         var expected = scanner.Offset + 4;
 
-            Assert.True(actual);
-        }
+         _ = IfPrecededBy(
+            Atom("0123"),
+            Bind(
+               Atom("xyz"),
+               _ => Optional(Atom("0123"))
+            ))(scanner);
 
-        [Fact]
-        public void TryBind_NonMatch_AfterMatch_AdvancesOffset_ByFirstMatch()
-        {
-            var parser = TryBind(Atom('a'), a => TryBind<char, char>(Ignore('B'), _ => Empty<char>));
-            var expected = _reader.Offset + 1;
+         var actual = scanner.Offset;
 
-            _ = parser(_reader);
+         Assert.Equal(expected, actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void IfPrecededBy_OverMatching_NonMatch_Is_Failure()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         var actual = IfPrecededBy(Atom("0123"), Atom("xyz012"))(scanner).IsMatch;
 
-    public class UntilTests
-    {
-        private readonly TextScanner _reader;
+         Assert.False(actual);
+      }
 
-        public UntilTests() => _reader = new TextScanner(TestText);
+      [Fact]
+      public void IfPrecededBy_OverMatching_NonMatch_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-        [Fact]
-        public void Until_Matching_Is_Atom()
-        {
-            var parsed = Until(Atom('0'))(_reader);
+         var expected = scanner.Offset;
 
-            Assert.True(parsed.IsToken);
-        }
+         _ = IfPrecededBy(Atom("0123"), Atom("xyz012"))(scanner);
 
-        [Fact]
-        public void Until_Matching_AdvancesOffset()
-        {
-            var expected = _reader.Offset + TestOffset;
+         var actual = scanner.Offset;
 
-            _ = Until(Atom('0'))(_reader);
+         Assert.Equal(expected, actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void IfPrecededBy_NonMatching_Is_Failure()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-            Assert.Equal(expected, actual);
-        }
+         var actual = IfPrecededBy(Atom("0123"), Character.UppercaseLetter)(scanner).IsMatch;
 
-        [Fact]
-        public void Until_NonMatching_Is_Atom()
-        {
-            var parsed = Until(Atom(' '))(_reader);
+         Assert.False(actual);
+      }
 
-            Assert.True(parsed.IsToken);
-        }
+      [Fact]
+      public void IfPrecededBy_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var scanner = new TextScanner(_reader.Text);
+         scanner.Advance(TestOffset);
 
-        [Fact]
-        public void Until_NonMatching_AdvancesOffset()
-        {
-            var expected = _reader.Offset + _reader.Text.Length;
+         var expected = scanner.Offset;
 
-            _ = Until(Atom(' '))(_reader);
+         _ = IfPrecededBy(Atom("0123"), Character.UppercaseLetter)(scanner);
 
-            var actual = _reader.Offset;
+         var actual = scanner.Offset;
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         Assert.Equal(expected, actual);
+      }
 
-    public class ZeroOrMoreTests
-    {
-        private readonly TextScanner _reader;
+      [Fact]
+      public void IfPrecededBy_NonMatching_Start_Is_Failure()
+      {
+         var actual = IfPrecededBy(Atom("0123"), Character.UppercaseLetter)(_reader).IsMatch;
 
-        public ZeroOrMoreTests() => _reader = new TextScanner(TestText);
+         Assert.False(actual);
+      }
 
-        [Fact]
-        public void ZeroOrMore_Matching_Zero_Times_Is_Atom()
-        {
-            var actual = ZeroOrMore(Parse.Character.UppercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void IfPrecededBy_NonMatching_Start_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            Assert.True(actual);
-        }
+         _ = IfPrecededBy(Atom("0123"), Character.UppercaseLetter)(_reader);
 
-        [Fact]
-        public void ZeroOrMore_Matching_Zero_Times_DoesNot_AdvanceOffset()
-        {
-            var expected = _reader.Offset;
+         var actual = _reader.Offset;
 
-            _ = ZeroOrMore(Parse.Character.UppercaseLetter)(_reader);
+         Assert.Equal(expected, actual);
+      }
 
-            var actual = _reader.Offset;
+      [Fact]
+      public void IfPrecededBy_NonMatching_Assertion_Start_Is_Failure()
+      {
+         var actual = IfPrecededBy(Atom("abc"), Character.UppercaseLetter)(_reader).IsMatch;
 
-            Assert.Equal(expected, actual);
-        }
+         Assert.False(actual);
+      }
 
-        [Fact]
-        public void ZeroOrMore_Matching_GreaterThan_Zero_Times_Is_Atom()
-        {
-            var actual = ZeroOrMore(Parse.Character.LowercaseLetter)(_reader).IsToken;
+      [Fact]
+      public void IfPrecededBy_NonMatching_Assertion_Start_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
 
-            Assert.True(actual);
-        }
+         _ = IfPrecededBy(Atom("abc"), Character.UppercaseLetter)(_reader);
 
-        [Fact]
-        public void ZeroOrMore_Matching_GreaterThan_Zero_Times_AdvancesOffset()
-        {
-            var expected = _reader.Offset + TestOffset;
+         var actual = _reader.Offset;
 
-            _ = ZeroOrMore(Parse.Character.LowercaseLetter)(_reader);
+         Assert.Equal(expected, actual);
+      }
+   }
 
-            var actual = _reader.Offset;
+   public class RangeTests
+   {
+      private readonly TextScanner _reader;
 
-            Assert.Equal(expected, actual);
-        }
+      public RangeTests() => _reader = new TextScanner(TestText);
 
-        [Fact]
-        public void ZeroOrMore_FullMatch_Is_Atom()
-        {
-            var reader = new TextScanner(TestText[0..TestOffset]);
-            var actual = ZeroOrMore(Parse.Character.LowercaseLetter)(reader).IsToken;
+      [Fact]
+      public void Range_Matching_Zero_Times_Is_EmptyToken()
+      {
+         var actual = Range(0, 0, Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-            Assert.True(actual);
-        }
+         Assert.True(actual);
+      }
 
-        [Fact]
-        public void ZeroOrMore_FullMatch_AdvancesOffset()
-        {
-            var reader = new TextScanner(TestText[0..TestOffset]);
-            var expected = reader.Offset + TestOffset;
+      [Fact]
+      public void Range_Matching_AtLeast_Min_Times_Is_Atom()
+      {
+         var actual = Range(1, 26, Parse.Character.LowercaseLetter)(_reader).IsMatch;
 
-            _ = ZeroOrMore(Parse.Character.LowercaseLetter)(reader);
+         Assert.True(actual);
+      }
 
-            var actual = reader.Offset;
+      [Fact]
+      public void Range_Matching_AtLeast_Min_Times_AdvancesOffset()
+      {
+         var expected = _reader.Offset + TestOffset;
 
-            Assert.Equal(expected, actual);
-        }
-    }
+         _ = Range(1, 27, Parse.Character.LowercaseLetter)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Range_Matching_LessThan_Min_Times_Is_Failure()
+      {
+         var actual = Range(27, 27, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void Range_Matching_LessThan_Min_Times_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
+
+         _ = Range(27, 27, Parse.Character.LowercaseLetter)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Range_Matching_Negative_Count_Is_Failure()
+      {
+         var actual = Range(-1, 26, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void Range_Matching_Negative_Count_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
+
+         _ = Range(-1, 26, Parse.Character.LowercaseLetter)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Range_Matching_Max_LessThan_Min_Is_Failure()
+      {
+         var actual = Range(26, 1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void Range_Matching_Max_LessThan_Min_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
+
+         _ = Range(26, 1, Parse.Character.LowercaseLetter)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+   }
+
+   public class SatisfiesTests
+   {
+      private static readonly Func<char, bool> CharIsA = c => c == 'a';
+      private static readonly Func<char, bool> CharIsB = c => c == 'b';
+
+      private readonly TextScanner _reader;
+
+      public SatisfiesTests() => _reader = new TextScanner(TestText);
+
+      [Fact]
+      public void Satisfies_Matching_Passes_Test_Is_Atom()
+      {
+         var parse = Satisfies(Atom('a'), CharIsA)(_reader);
+         var success = parse.IsMatch;
+
+         Assert.True(success);
+      }
+
+      [Fact]
+      public void Satisfies_Matching_Passes_Test_AdvancesOffset()
+      {
+         var expected = _reader.Offset + 1;
+
+         _ = Satisfies(Atom('a'), CharIsA)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Satisfies_Matching_Fails_Test_Is_Failure()
+      {
+         var actual = Satisfies(Atom('a'), CharIsB)(_reader).IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void Satisfies_Matching_Fails_Test_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
+
+         _ = Satisfies(Atom('a'), CharIsB)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Satisfies_NonMatching_Is_Failure()
+      {
+         var actual = Satisfies(Atom('A'), CharIsA)(_reader).IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void Satisfies_NonMatching_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
+
+         _ = Satisfies(Atom('A'), CharIsA)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+   }
+
+   public class SplitTests
+   {
+      [Fact]
+      public void Split_MatchingRules_Is_Atom()
+      {
+         var reader = new TextScanner("abba abba abba abba");
+         var parse = SeparatedBy(Atom("abba"), Atom(" "))(reader);
+         var actual = parse.IsMatch;
+
+         Assert.True(actual);
+      }
+
+      [Fact]
+      public void Split_MatchingRules_Advances_Offset()
+      {
+         var reader = new TextScanner("abba abba abba abba");
+         var expected = reader.Offset + 19;
+         _ = SeparatedBy(Atom("abba"), Atom(" "))(reader);
+         var actual = reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Split_NonMatchingRule_Is_Atom()
+      {
+         var reader = new TextScanner("abba baab abba abba");
+         var parse = SeparatedBy(Atom("abba"), Atom(" "))(reader);
+         var actual = parse.IsMatch;
+
+         Assert.True(actual);
+      }
+
+      [Fact]
+      public void Split_StartingWith_NonMatchingRule_Is_Failure()
+      {
+         var reader = new TextScanner("baab abba abba abba");
+         var parse = SeparatedBy(Atom("abba"), Atom(" "))(reader);
+         var actual = parse.IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void Split_NonMatchingSeparator_Is_Atom()
+      {
+         var reader = new TextScanner("abbaabbaabbaabba");
+         var parse = SeparatedBy(Atom("abba"), Atom(" "))(reader);
+         var actual = parse.IsMatch;
+
+         Assert.True(actual);
+      }
+   }
+
+   public class StartOfTextTests
+   {
+      private readonly TextScanner _reader;
+
+      public StartOfTextTests() => _reader = new TextScanner(TestText);
+
+      [Fact]
+      public void SOT_AtBeginning_Is_EmptyToken()
+      {
+         var parsed = StartOfText(_reader);
+
+         Assert.True(parsed.IsMatch);
+         Assert.Equal(0, parsed.Length);
+      }
+
+      [Fact]
+      public void SOT_AtBeginning_DoesNotFollowedBy_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
+
+         _ = StartOfText(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void SOT_NotFollowedBy_AtBeginning_Is_Failure()
+      {
+         _reader.Advance();
+
+         var actual = StartOfText(_reader).IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void SOT_NotFollowedBy_AtEnd_DoesNotFollowedBy_AdvanceOffset()
+      {
+         _reader.Advance();
+
+         var expected = _reader.Offset;
+
+         _ = StartOfText(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+   }
+
+   public class AtomTests
+   {
+      private readonly TextScanner _reader;
+
+      public AtomTests() => _reader = new TextScanner(TestText);
+
+      [Fact]
+      public void Atom_Matching_Char_Is_Atom()
+      {
+         var actual = Atom('a')(_reader).IsMatch;
+
+         Assert.True(actual);
+      }
+
+      [Fact]
+      public void Atom_Matching_Char_AdvancesOffset()
+      {
+         var expected = _reader.Offset + 1;
+
+         _ = Atom('a')(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Atom_NonMatching_Char_Is_Failure()
+      {
+         var actual = Atom('0')(_reader).IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void Atom_NonMatching_Char_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
+
+         _ = Atom('0')(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Atom_Matching_String_Is_Atom()
+      {
+         var actual = Atom("abcd")(_reader).IsMatch;
+
+         Assert.True(actual);
+      }
+
+      [Fact]
+      public void Atom_Matching_String_AdvancesOffset()
+      {
+         var expected = _reader.Offset + 4;
+
+         _ = Atom("abcd")(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Atom_NonMatching_String_Is_Failure()
+      {
+         var actual = Atom("0123")(_reader).IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void Atom_NonMatching_String_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
+
+         _ = Atom("0123")(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Atom_Matching_Regex_Is_Atom()
+      {
+         var actual = Parse.Character.LowercaseLetter(_reader).IsMatch;
+
+         Assert.True(actual);
+      }
+
+      [Fact]
+      public void Atom_Matching_Regex_AdvancesOffset()
+      {
+         var expected = _reader.Offset + 1;
+
+         _ = Parse.Character.LowercaseLetter(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Atom_NonMatching_Regex_Is_Failure()
+      {
+         var actual = Parse.Character.UppercaseLetter(_reader).IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void Atom_NonMatching_Regex_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
+
+         _ = Parse.Character.UppercaseLetter(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+   }
+
+   public class TryBindTests
+   {
+      private readonly TextScanner _reader;
+
+      public TryBindTests() => _reader = new TextScanner(TestText);
+
+      [Fact]
+      public void TryBind_Match_Is_Atom()
+      {
+         var parser = Partial<char, char>(Atom('a'), a => Empty<char>);
+
+         var actual = parser(_reader).IsMatch;
+
+         Assert.True(actual);
+      }
+
+      [Fact]
+      public void TryBind_Match_AdvancesOffset()
+      {
+         var parser = Partial<char, char>(Atom('a'), a => Empty<char>);
+         var expected = _reader.Offset + 1;
+
+         _ = parser(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void TryBind_Match_NoRead_Is_Atom()
+      {
+         var parser = Partial<char, char>(Ignore('a'), a => Empty<char>); ;
+
+         var actual = parser(_reader).IsMatch;
+
+         Assert.True(actual);
+      }
+
+      [Fact]
+      public void TryBind_Match_NoRead_AdvancesOffset()
+      {
+         var parser = Partial<char, char>(Ignore('a'), a => Empty<char>);
+         var expected = _reader.Offset + 1;
+
+         _ = parser(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void TryBind_Match_ReadFirstMatchOnly_Is_Atom()
+      {
+         var parser = Partial(
+             Atom('a'),
+             a => Partial<char, char>(
+                 Ignore('b'),
+                 _ => Empty<char>));
+
+         var parse = parser(_reader);
+         var actual = parse.IsMatch;
+
+         Assert.True(actual);
+      }
+
+      [Fact]
+      public void TryBind_Match_ReadFirstMatchOnly_AdvancesOffset()
+      {
+         var parser = Partial(
+             Atom('a'),
+             a => Partial<char, char>(
+                 Ignore('b'),
+                 _ => Empty<char>));
+
+         var expected = _reader.Offset + 2;
+
+         _ = parser(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void TryBind_StartingWith_NonMatch_Is_Failure()
+      {
+         var actual = Partial<char, char>(Atom('A'), a => Empty<char>)(_reader).IsMatch;
+
+         Assert.False(actual);
+      }
+
+      [Fact]
+      public void TryBind_StartingWith_NonMatch_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
+
+         _ = Partial<char, char>(Atom('A'), a => Empty<char>)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void TryBind_NonMatch_AfterMatch_Is_Atom()
+      {
+         var parser = Partial(Atom('a'), a => Bind<char, char>(Ignore('B'), _ => Empty<char>));
+         var parse = parser(_reader);
+         var actual = parse.IsMatch;
+
+         Assert.True(actual);
+      }
+
+      [Fact]
+      public void TryBind_NonMatch_AfterMatch_AdvancesOffset_ByFirstMatch()
+      {
+         var parser = Partial(Atom('a'), a => Partial<char, char>(Ignore('B'), _ => Empty<char>));
+         var expected = _reader.Offset + 1;
+
+         _ = parser(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+   }
+
+   public class UntilTests
+   {
+      private readonly TextScanner _reader;
+
+      public UntilTests() => _reader = new TextScanner(TestText);
+
+      [Fact]
+      public void Until_Matching_Is_Atom()
+      {
+         var parsed = Until(Atom('0'))(_reader);
+
+         Assert.True(parsed.IsMatch);
+      }
+
+      [Fact]
+      public void Until_Matching_AdvancesOffset()
+      {
+         var expected = _reader.Offset + TestOffset;
+
+         _ = Until(Atom('0'))(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Until_NonMatching_Is_Atom()
+      {
+         var parsed = Until(Atom(' '))(_reader);
+
+         Assert.True(parsed.IsMatch);
+      }
+
+      [Fact]
+      public void Until_NonMatching_AdvancesOffset()
+      {
+         var expected = _reader.Offset + _reader.Text.Length;
+
+         _ = Until(Atom(' '))(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+   }
+
+   public class ZeroOrMoreTests
+   {
+      private readonly TextScanner _reader;
+
+      public ZeroOrMoreTests() => _reader = new TextScanner(TestText);
+
+      [Fact]
+      public void ZeroOrMore_Matching_Zero_Times_Is_Atom()
+      {
+         var actual = ZeroOrMore(Parse.Character.UppercaseLetter)(_reader).IsMatch;
+
+         Assert.True(actual);
+      }
+
+      [Fact]
+      public void ZeroOrMore_Matching_Zero_Times_DoesNot_AdvanceOffset()
+      {
+         var expected = _reader.Offset;
+
+         _ = ZeroOrMore(Parse.Character.UppercaseLetter)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void ZeroOrMore_Matching_GreaterThan_Zero_Times_Is_Atom()
+      {
+         var actual = ZeroOrMore(Parse.Character.LowercaseLetter)(_reader).IsMatch;
+
+         Assert.True(actual);
+      }
+
+      [Fact]
+      public void ZeroOrMore_Matching_GreaterThan_Zero_Times_AdvancesOffset()
+      {
+         var expected = _reader.Offset + TestOffset;
+
+         _ = ZeroOrMore(Parse.Character.LowercaseLetter)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void ZeroOrMore_FullMatch_Is_Atom()
+      {
+         var reader = new TextScanner(TestText[0..TestOffset]);
+         var actual = ZeroOrMore(Parse.Character.LowercaseLetter)(reader).IsMatch;
+
+         Assert.True(actual);
+      }
+
+      [Fact]
+      public void ZeroOrMore_FullMatch_AdvancesOffset()
+      {
+         var reader = new TextScanner(TestText[0..TestOffset]);
+         var expected = reader.Offset + TestOffset;
+
+         _ = ZeroOrMore(Parse.Character.LowercaseLetter)(reader);
+
+         var actual = reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+   }
 }
