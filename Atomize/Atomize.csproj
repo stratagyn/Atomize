@@ -4,7 +4,29 @@
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Title>Atomize</Title>
+    <Authors>stratagyn</Authors>
+    <Description>A combinatory parser building library supporting the standard PEG operators, as well as, positive and negative look-behind, and directly and indirectly left recursive parsers.</Description>
+    <Copyright>stratagyn 2023</Copyright>
+    <PackageProjectUrl>https://github.com/stratagyn/Atomize</PackageProjectUrl>
+    <PackageIcon>Stratagyn Logo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/stratagyn/Atomize</RepositoryUrl>
+    <PackageTags>parsing; text; combinatory parsing; peg; parsing expression grammar;</PackageTags>
+    <PackageLicenseExpression>  GPL-3.0-or-later</PackageLicenseExpression>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\..\..\OneDrive\Pictures\Stratagyn Logo.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Runtime.Caching" Version="7.0.0" />
