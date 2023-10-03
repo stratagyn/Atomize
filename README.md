@@ -13,12 +13,13 @@
 `Atomize` can be installed via NuGet or
 
 ```plaintext
-dotnet add package Mackerel
+dotnet add package Atomize
 ```
 
 ## Documentation
 
-
+[User Guide](https://github.com/stratagyn/Atomize/blob/master/docs/UserGuide.md)  
+[References](https://github.com/stratagyn/Atomize/tree/master/docs/References)
 
 ## Example: `BasicCalculator`
 
