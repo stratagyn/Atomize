@@ -148,6 +148,28 @@ public static partial class AtomizeTests
       public ChoiceTests() => _reader = new TextScanner(TestText);
 
       [Fact]
+      public void Choice_Matching_Empty_Is_Atom()
+      {
+         var pattern = Array.Empty<Parser<ReadOnlyMemory<char>>>();
+         var parsed = Choice(pattern)(_reader);
+
+         Assert.True(parsed.IsMatch);
+      }
+
+      [Fact]
+      public void Choice_Matching_Empty_DoesNot_AdvanceOffset()
+      {
+         var pattern = Array.Empty<Parser<ReadOnlyMemory<char>>>();
+         var expected = _reader.Offset;
+
+         _ = Choice(pattern)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
       public void Choice_Matching_Is_Atom()
       {
          var pattern = new Parser<ReadOnlyMemory<char>>[] { Atom("abcd"), Atom("0123"), Atom("!@#$") };
@@ -157,7 +179,7 @@ public static partial class AtomizeTests
       }
 
       [Fact]
-      public void Choice_Matching_Does_AdvancesOffset()
+      public void Choice_Matching_AdvancesOffset()
       {
          var pattern = new Parser<ReadOnlyMemory<char>>[] { Atom("abcd"), Atom("0123"), Atom("!@#$") };
          var expected = _reader.Offset + 4;
@@ -182,6 +204,28 @@ public static partial class AtomizeTests
       public void Choice_NonMatching_DoesNotFollowedBy_AdvancesOffset()
       {
          var pattern = new Parser<ReadOnlyMemory<char>>[] { Atom("ABCD"), Atom("0123"), Atom("!@#$") };
+         var expected = _reader.Offset;
+
+         _ = Choice(pattern)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Choice_Char_Matching_Empty_Is_Atom()
+      {
+         var pattern = Array.Empty<char>();
+         var parsed = Choice(pattern)(_reader);
+
+         Assert.True(parsed.IsMatch);
+      }
+
+      [Fact]
+      public void Choice_Char_Matching_Empty_DoesNot_AdvanceOffset()
+      {
+         var pattern = Array.Empty<char>();
          var expected = _reader.Offset;
 
          _ = Choice(pattern)(_reader);
@@ -236,6 +280,28 @@ public static partial class AtomizeTests
       }
 
       [Fact]
+      public void Choice_Regex_Matching_Empty_Is_Atom()
+      {
+         var pattern = Array.Empty<Regex>();
+         var parsed = Choice(pattern)(_reader);
+
+         Assert.True(parsed.IsMatch);
+      }
+
+      [Fact]
+      public void Choice_Regex_Matching_Empty_DoesNot_AdvanceOffset()
+      {
+         var pattern = Array.Empty<Regex>();
+         var expected = _reader.Offset;
+
+         _ = Choice(pattern)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
       public void Choice_Regex_Matching_Is_Atom()
       {
          var pattern = new Regex[] { LowercaseLetter, UppercaseLetter };
@@ -270,6 +336,28 @@ public static partial class AtomizeTests
       public void Choice_Regex_NonMatching_DoesNotFollowedBy_AdvancesOffset()
       {
          var pattern = new Regex[] { Digits, UppercaseLetter };
+         var expected = _reader.Offset;
+
+         _ = Choice(pattern)(_reader);
+
+         var actual = _reader.Offset;
+
+         Assert.Equal(expected, actual);
+      }
+
+      [Fact]
+      public void Choice_String_Matching_Empty_Is_Atom()
+      {
+         var pattern = Array.Empty<string>();
+         var parsed = Choice(pattern)(_reader);
+
+         Assert.True(parsed.IsMatch);
+      }
+
+      [Fact]
+      public void Choice_String_Matching_Empty_DoesNot_AdvanceOffset()
+      {
+         var pattern = Array.Empty<string>();
          var expected = _reader.Offset;
 
          _ = Choice(pattern)(_reader);
@@ -384,7 +472,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Exactly_Matching_Zero_Times_Is_EmptyToken()
       {
-         var parsed = Exactly(0, Parse.Character.LowercaseLetter)(_reader);
+         var parsed = Exactly(0, Parse.Single.LowercaseLetter)(_reader);
 
          Assert.True(parsed.IsMatch);
          Assert.Equal(0, parsed.Length);
@@ -393,7 +481,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Exactly_Matching_Exact_Count_Is_Atom()
       {
-         var parsed = Exactly(TestOffset, Parse.Character.LowercaseLetter)(_reader);
+         var parsed = Exactly(TestOffset, Parse.Single.LowercaseLetter)(_reader);
 
          Assert.True(parsed.IsMatch);
          Assert.Equal(TestOffset, parsed.Value!.Count);
@@ -403,7 +491,7 @@ public static partial class AtomizeTests
       public void Exactly_Matching_Exact_Count_AdvancesOffset()
       {
          var expected = _reader.Offset + TestOffset;
-         var _ = Exactly(TestOffset, Parse.Character.LowercaseLetter)(_reader);
+         var _ = Exactly(TestOffset, Parse.Single.LowercaseLetter)(_reader);
          var actual = _reader.Offset;
 
          Assert.Equal(expected, actual);
@@ -412,7 +500,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Exactly_Matching_LessThan_Count_Is_Failure()
       {
-         var parsed = Exactly(TestOffset + 1, Parse.Character.LowercaseLetter)(_reader);
+         var parsed = Exactly(TestOffset + 1, Parse.Single.LowercaseLetter)(_reader);
 
          Assert.False(parsed.IsMatch);
       }
@@ -421,7 +509,7 @@ public static partial class AtomizeTests
       public void Exactly_Matching_LessThan_Count_DoesNotFollowedBy_AdvanceOffset()
       {
          var expected = _reader.Offset;
-         var _ = Exactly(TestOffset + 1, Parse.Character.LowercaseLetter)(_reader);
+         var _ = Exactly(TestOffset + 1, Parse.Single.LowercaseLetter)(_reader);
          var actual = _reader.Offset;
 
          Assert.Equal(expected, actual);
@@ -430,7 +518,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Exactly_Matching_Negative_Count_Is_Failure()
       {
-         var parsed = Exactly(-1, Parse.Character.LowercaseLetter)(_reader);
+         var parsed = Exactly(-1, Parse.Single.LowercaseLetter)(_reader);
 
          Assert.False(parsed.IsMatch);
       }
@@ -470,7 +558,7 @@ public static partial class AtomizeTests
       [Fact]
       public void If_True_Match_Is_True_Atom()
       {
-         var parser = If(Atom('a'), Text.LowercaseLetter, Empty<ReadOnlyMemory<char>>);
+         var parser = If(Atom('a'), Multiple.LowercaseLetter, Empty<ReadOnlyMemory<char>>);
          var expected = "abcdefghijklmnopqrstuvwxyz".AsMemory();
          var actual = parser(_reader).Value;
 
@@ -480,7 +568,7 @@ public static partial class AtomizeTests
       [Fact]
       public void If_True_Match_AdvancesOffset()
       {
-         var parser = If(Atom('a'), Text.LowercaseLetter, Text.UppercaseLetter);
+         var parser = If(Atom('a'), Multiple.LowercaseLetter, Multiple.UppercaseLetter);
          var expected = _reader.Offset + 26;
 
          _ = parser(_reader);
@@ -493,7 +581,7 @@ public static partial class AtomizeTests
       [Fact]
       public void If_True_NonMatch_Is_False_Atom()
       {
-         var parser = If(Atom('a'), Text.UppercaseLetter, Text.LowercaseLetter);
+         var parser = If(Atom('a'), Multiple.UppercaseLetter, Multiple.LowercaseLetter);
          var actual = parser(_reader);
 
          Assert.False(actual.IsMatch);
@@ -504,7 +592,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = If(Atom('a'), Text.UppercaseLetter, Text.LowercaseLetter);
+         _ = If(Atom('a'), Multiple.UppercaseLetter, Multiple.LowercaseLetter);
 
          var actual = _reader.Offset;
 
@@ -514,7 +602,7 @@ public static partial class AtomizeTests
       [Fact]
       public void If_False_Match_Is_False_Atom()
       {
-         var parser = If(Atom('A'), Text.UppercaseLetter, Text.LowercaseLetter);
+         var parser = If(Atom('A'), Multiple.UppercaseLetter, Multiple.LowercaseLetter);
          var expected = "abcdefghijklmnopqrstuvwxyz".AsMemory();
          var actual = parser(_reader).Value;
 
@@ -524,7 +612,7 @@ public static partial class AtomizeTests
       [Fact]
       public void If_False_Match_AdvancesOffset()
       {
-         var parser = If(Atom('A'), Text.UppercaseLetter, Text.LowercaseLetter);
+         var parser = If(Atom('A'), Multiple.UppercaseLetter, Multiple.LowercaseLetter);
          var expected = _reader.Offset + 26;
 
          _ = parser(_reader);
@@ -537,7 +625,7 @@ public static partial class AtomizeTests
       [Fact]
       public void If_False_NonMatch_Is_False_Atom()
       {
-         var parser = If(Atom('A'), Text.UppercaseLetter, Text.UppercaseLetter);
+         var parser = If(Atom('A'), Multiple.UppercaseLetter, Multiple.UppercaseLetter);
          var actual = parser(_reader);
 
          Assert.False(actual.IsMatch);
@@ -548,7 +636,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = If(Atom('A'), Text.UppercaseLetter, Text.UppercaseLetter);
+         _ = If(Atom('A'), Multiple.UppercaseLetter, Multiple.UppercaseLetter);
 
          var actual = _reader.Offset;
 
@@ -1037,7 +1125,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Maximum_Matching_Zero_Times_Is_EmptyToken()
       {
-         var parsed = Maximum(0, Parse.Character.LowercaseLetter)(_reader);
+         var parsed = Maximum(0, Parse.Single.LowercaseLetter)(_reader);
 
          Assert.True(parsed.IsMatch);
          Assert.Equal(0, parsed.Length);
@@ -1046,7 +1134,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Maximum_Matching_Exactly_Max_Times_Is_Atom()
       {
-         var actual = Maximum(1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = Maximum(1, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -1056,7 +1144,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset + TestOffset;
 
-         _ = Maximum(TestOffset, Parse.Character.LowercaseLetter)(_reader);
+         _ = Maximum(TestOffset, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -1066,7 +1154,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Maximum_Matching_LessThan_Max_Times_Is_Atom()
       {
-         var actual = Maximum(27, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = Maximum(27, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -1076,7 +1164,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset + TestOffset;
 
-         _ = Maximum(27, Parse.Character.LowercaseLetter)(_reader);
+         _ = Maximum(27, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -1086,7 +1174,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Maximum_Matching_Negative_Max_Is_Failure()
       {
-         var actual = Maximum(-1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = Maximum(-1, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -1096,7 +1184,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = Minimum(-1, Parse.Character.LowercaseLetter)(_reader);
+         _ = Minimum(-1, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -1113,7 +1201,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Minimum_Matching_Zero_Times_Is_EmptyToken()
       {
-         var parsed = Minimum(0, Parse.Character.UppercaseLetter)(_reader);
+         var parsed = Minimum(0, Parse.Single.UppercaseLetter)(_reader);
 
          Assert.True(parsed.IsMatch);
          Assert.Equal(0, parsed.Length);
@@ -1122,7 +1210,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Minimum_Matching_Exactly_Min_Times_Is_Atom()
       {
-         var actual = Minimum(1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = Minimum(1, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -1132,7 +1220,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset + TestOffset;
 
-         _ = Minimum(TestOffset, Parse.Character.LowercaseLetter)(_reader);
+         _ = Minimum(TestOffset, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -1142,7 +1230,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Minimum_Matching_LessThan_Min_Times_Is_Failure()
       {
-         var actual = Minimum(27, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = Minimum(27, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -1152,7 +1240,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = Minimum(27, Parse.Character.LowercaseLetter)(_reader);
+         _ = Minimum(27, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -1162,7 +1250,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Minimum_Matching_GreaterThan_Min_Times_Is_Atom()
       {
-         var actual = Minimum(25, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = Minimum(25, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -1172,7 +1260,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset + TestOffset;
 
-         _ = Minimum(1, Parse.Character.LowercaseLetter)(_reader);
+         _ = Minimum(1, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -1182,7 +1270,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Minimum_Matching_Negative_Min_Is_Failure()
       {
-         var actual = Minimum(-1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = Minimum(-1, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -1192,7 +1280,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = Minimum(-1, Parse.Character.LowercaseLetter)(_reader);
+         _ = Minimum(-1, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -1209,7 +1297,7 @@ public static partial class AtomizeTests
       [Fact]
       public void NotFollowedBy_Matching_Is_Failure()
       {
-         var actual = NotFollowedBy<char, char>(Atom('a'))(_reader).IsMatch;
+         var actual = NotFollowedBy(Atom('a'))(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -1219,7 +1307,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = NotFollowedBy<char, char>(Atom('a'))(_reader);
+         _ = NotFollowedBy(Atom('a'))(_reader);
 
          var actual = _reader.Offset;
 
@@ -1229,7 +1317,7 @@ public static partial class AtomizeTests
       [Fact]
       public void NotFollowedBy_NonMatching_Is_Atom()
       {
-         var actual = NotFollowedBy<char, char>(Atom('A'))(_reader).IsMatch;
+         var actual = NotFollowedBy(Atom('A'))(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -1239,7 +1327,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = NotFollowedBy<char, char>(Atom('A'))(_reader);
+         _ = NotFollowedBy(Atom('A'))(_reader);
 
          var actual = _reader.Offset;
 
@@ -1319,7 +1407,7 @@ public static partial class AtomizeTests
          var scanner = new TextScanner(_reader.Text);
          scanner.Advance(TestOffset);
 
-         var actual = NotPrecededBy<ReadOnlyMemory<char>, char>(Text.LowercaseLetter)(scanner).IsMatch;
+         var actual = NotPrecededBy(Multiple.LowercaseLetter)(scanner).IsMatch;
 
          Assert.False(actual);
       }
@@ -1332,7 +1420,7 @@ public static partial class AtomizeTests
 
          var expected = scanner.Offset;
 
-         _ = NotPrecededBy<ReadOnlyMemory<char>, char>(Text.LowercaseLetter)(scanner);
+         _ = NotPrecededBy(Multiple.LowercaseLetter)(scanner);
 
          var actual = scanner.Offset;
 
@@ -1345,7 +1433,7 @@ public static partial class AtomizeTests
          var scanner = new TextScanner(_reader.Text);
          scanner.Advance(TestOffset);
 
-         var actual = NotPrecededBy<ReadOnlyMemory<char>, char>(
+         var actual = NotPrecededBy(
             Bind(
                Atom("xyz"), 
                _ => Optional(Atom("0123"))
@@ -1362,7 +1450,7 @@ public static partial class AtomizeTests
 
          var expected = scanner.Offset;
 
-         _ = NotPrecededBy<ReadOnlyMemory<char>, char>(
+         _ = NotPrecededBy(
             Bind(
                Atom("xyz"),
                _ => Optional(Atom("0123"))
@@ -1379,7 +1467,7 @@ public static partial class AtomizeTests
          var scanner = new TextScanner(_reader.Text);
          scanner.Advance(TestOffset);
 
-         var actual = NotPrecededBy<ReadOnlyMemory<char>, char>(Atom("xyz012"))(scanner).IsMatch;
+         var actual = NotPrecededBy(Atom("xyz012"))(scanner).IsMatch;
 
          Assert.True(actual);
       }
@@ -1392,7 +1480,7 @@ public static partial class AtomizeTests
 
          var expected = scanner.Offset;
 
-         _ = NotPrecededBy<ReadOnlyMemory<char>, char>(Atom("xyz012"))(scanner);
+         _ = NotPrecededBy(Atom("xyz012"))(scanner);
 
          var actual = scanner.Offset;
 
@@ -1405,7 +1493,7 @@ public static partial class AtomizeTests
          var scanner = new TextScanner(_reader.Text);
          scanner.Advance(TestOffset);
 
-         var actual = NotPrecededBy<ReadOnlyMemory<char>, char>(Text.UppercaseLetter)(scanner).IsMatch;
+         var actual = NotPrecededBy(Multiple.UppercaseLetter)(scanner).IsMatch;
 
          Assert.True(actual);
       }
@@ -1418,7 +1506,7 @@ public static partial class AtomizeTests
 
          var expected = scanner.Offset;
 
-         _ = NotPrecededBy<ReadOnlyMemory<char>, char>(Text.UppercaseLetter)(scanner);
+         _ = NotPrecededBy(Multiple.UppercaseLetter)(scanner);
 
          var actual = scanner.Offset;
 
@@ -1431,7 +1519,7 @@ public static partial class AtomizeTests
          var scanner = new TextScanner(_reader.Text);
          scanner.Advance(TestOffset);
 
-         var actual = IfNotPrecededBy(Atom("0123"), Parse.Character.LowercaseLetter)(scanner).IsMatch;
+         var actual = IfNotPrecededBy(Atom("0123"), Parse.Single.LowercaseLetter)(scanner).IsMatch;
 
          Assert.False(actual);
       }
@@ -1444,7 +1532,7 @@ public static partial class AtomizeTests
 
          var expected = scanner.Offset;
 
-         _ = IfNotPrecededBy(Atom("0123"), Parse.Character.LowercaseLetter)(scanner);
+         _ = IfNotPrecededBy(Atom("0123"), Parse.Single.LowercaseLetter)(scanner);
 
          var actual = scanner.Offset;
 
@@ -1519,7 +1607,7 @@ public static partial class AtomizeTests
          var scanner = new TextScanner(_reader.Text);
          scanner.Advance(TestOffset);
 
-         var actual = IfNotPrecededBy(Atom("0123"), Parse.Character.UppercaseLetter)(scanner).IsMatch;
+         var actual = IfNotPrecededBy(Atom("0123"), Parse.Single.UppercaseLetter)(scanner).IsMatch;
 
          Assert.True(actual);
       }
@@ -1532,7 +1620,7 @@ public static partial class AtomizeTests
 
          var expected = scanner.Offset + 4;
 
-         _ = IfNotPrecededBy(Atom("0123"), Parse.Character.UppercaseLetter)(scanner);
+         _ = IfNotPrecededBy(Atom("0123"), Parse.Single.UppercaseLetter)(scanner);
 
          var actual = scanner.Offset;
 
@@ -1542,7 +1630,7 @@ public static partial class AtomizeTests
       [Fact]
       public void IfNotPrecededBy_NonMatching_Start_Is_Failure()
       {
-         var actual = IfNotPrecededBy(Atom("0123"), Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = IfNotPrecededBy(Atom("0123"), Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -1552,7 +1640,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = IfNotPrecededBy(Atom("0123"), Parse.Character.LowercaseLetter);
+         _ = IfNotPrecededBy(Atom("0123"), Parse.Single.LowercaseLetter);
 
          var actual = _reader.Offset;
 
@@ -1562,7 +1650,7 @@ public static partial class AtomizeTests
       [Fact]
       public void IfNotPrecededBy_NonMatching_Assertion_Start_Is_Match()
       {
-         var actual = IfNotPrecededBy(Atom("abc"), Character.UppercaseLetter)(_reader).IsMatch;
+         var actual = IfNotPrecededBy(Atom("abc"), Parse.Single.UppercaseLetter)(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -1572,7 +1660,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset + 3;
 
-         _ = IfNotPrecededBy(Atom("abc"), Character.UppercaseLetter)(_reader);
+         _ = IfNotPrecededBy(Atom("abc"), Parse.Single.UppercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -1609,7 +1697,7 @@ public static partial class AtomizeTests
       [Fact]
       public void NotExactly_Matching_Exactly_N_Times_Is_Failure()
       {
-         var actual = NotExactly(TestOffset, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = NotExactly(TestOffset, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -1619,7 +1707,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = NotExactly(TestOffset, Parse.Character.LowercaseLetter)(_reader);
+         _ = NotExactly(TestOffset, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -1629,7 +1717,7 @@ public static partial class AtomizeTests
       [Fact]
       public void NotExactly_Matching_GreaterThan_N_Times_Is_Atom()
       {
-         var actual = NotExactly(1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = NotExactly(1, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -1639,7 +1727,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset + TestOffset;
 
-         _ = NotExactly(1, Parse.Character.LowercaseLetter)(_reader);
+         _ = NotExactly(1, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -1650,7 +1738,7 @@ public static partial class AtomizeTests
       public void NotExactly_Full_Match_Is_Atom()
       {
          var reader = new TextScanner(TestText[0..TestOffset]);
-         var actual = NotExactly(1, Parse.Character.LowercaseLetter)(reader).IsMatch;
+         var actual = NotExactly(1, Parse.Single.LowercaseLetter)(reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -1661,7 +1749,7 @@ public static partial class AtomizeTests
          var reader = new TextScanner(TestText[0..TestOffset]);
          var expected = reader.Offset + TestOffset;
 
-         _ = NotExactly(1, Parse.Character.LowercaseLetter)(reader);
+         _ = NotExactly(1, Parse.Single.LowercaseLetter)(reader);
 
          var actual = reader.Offset;
 
@@ -1671,7 +1759,7 @@ public static partial class AtomizeTests
       [Fact]
       public void NotExactly_Matching_Negative_N_Is_Failure()
       {
-         var actual = NotExactly(-1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = NotExactly(-1, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -1681,7 +1769,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = NotExactly(-1, Parse.Character.LowercaseLetter)(_reader);
+         _ = NotExactly(-1, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -1698,7 +1786,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Optional_Matching_Is_Atom()
       {
-         var actual = Optional(Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = Optional(Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -1708,7 +1796,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset + 1;
 
-         _ = Optional(Parse.Character.LowercaseLetter)(_reader);
+         _ = Optional(Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -1718,7 +1806,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Optional_NonMatching_Is_Atom()
       {
-         var actual = Optional(Parse.Character.UppercaseLetter)(_reader).IsMatch;
+         var actual = Optional(Parse.Single.UppercaseLetter)(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -1728,7 +1816,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = Optional(Parse.Character.UppercaseLetter)(_reader);
+         _ = Optional(Parse.Single.UppercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -1837,10 +1925,10 @@ public static partial class AtomizeTests
          Memoize(Choice(
             from left in Ref(() => LRParser!)
             from _ in Atom('-')
-            from right in Text.Number
+            from right in Multiple.Number
             select left - double.Parse(right.Span),
             
-            from d in Text.Number
+            from d in Multiple.Number
             select double.Parse(d.Span)));
 
       private static readonly Parser<double> ILRParserA =
@@ -1850,10 +1938,10 @@ public static partial class AtomizeTests
          Choice(
             from left in ILRParserA
             from _ in Atom('-')
-            from right in Text.Number
+            from right in Multiple.Number
             select left - double.Parse(right.Span),
 
-            from d in Text.Number
+            from d in Multiple.Number
             select double.Parse(d.Span));
 
       [Fact]
@@ -2048,7 +2136,7 @@ public static partial class AtomizeTests
       {
          var scanner = new TextScanner(_reader.Text);
 
-         var actual = FollowedBy<char, char>(Atom('a'))(scanner).IsMatch;
+         var actual = FollowedBy(Atom('a'))(scanner).IsMatch;
 
          Assert.True(actual);
       }
@@ -2060,7 +2148,7 @@ public static partial class AtomizeTests
 
          var expected = scanner.Offset;
 
-         _ = FollowedBy<char, char>(Atom('a'))(scanner);
+         _ = FollowedBy(Atom('a'))(scanner);
 
          var actual = scanner.Offset;
 
@@ -2070,7 +2158,7 @@ public static partial class AtomizeTests
       [Fact]
       public void FollowedBy_NonMatching_Is_Failure()
       {
-         var actual = FollowedBy<char, char>(Atom('A'))(_reader).IsMatch;
+         var actual = FollowedBy(Atom('A'))(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -2080,7 +2168,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = FollowedBy<char, char>(Atom('A'))(_reader);
+         _ = FollowedBy(Atom('A'))(_reader);
 
          var actual = _reader.Offset;
 
@@ -2090,7 +2178,7 @@ public static partial class AtomizeTests
       [Fact]
       public void FollowedBy_NonMatching_Start_Is_Failure()
       {
-         var actual = FollowedBy<char, char>(Atom('A'))(_reader).IsMatch;
+         var actual = FollowedBy(Atom('A'))(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -2100,7 +2188,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = FollowedBy<char, char>(Atom('A'))(_reader);
+         _ = FollowedBy(Atom('A'))(_reader);
 
          var actual = _reader.Offset;
 
@@ -2184,7 +2272,7 @@ public static partial class AtomizeTests
          var scanner = new TextScanner(_reader.Text);
          scanner.Advance(TestOffset);
 
-         var actual = PrecededBy<ReadOnlyMemory<char>, char>(Text.LowercaseLetter)(scanner).IsMatch;
+         var actual = PrecededBy(Multiple.LowercaseLetter)(scanner).IsMatch;
 
          Assert.True(actual);
       }
@@ -2197,7 +2285,7 @@ public static partial class AtomizeTests
 
          var expected = scanner.Offset;
 
-         _ = PrecededBy<ReadOnlyMemory<char>, char>(Text.LowercaseLetter)(scanner);
+         _ = PrecededBy(Multiple.LowercaseLetter)(scanner);
 
          var actual = scanner.Offset;
 
@@ -2210,7 +2298,7 @@ public static partial class AtomizeTests
          var scanner = new TextScanner(_reader.Text);
          scanner.Advance(TestOffset);
 
-         var actual = PrecededBy<ReadOnlyMemory<char>, char>(
+         var actual = PrecededBy(
             Bind(
                Atom("xyz"),
                _ => Optional(Atom("0123"))
@@ -2227,7 +2315,7 @@ public static partial class AtomizeTests
 
          var expected = scanner.Offset;
 
-         _ = PrecededBy<ReadOnlyMemory<char>, char>(
+         _ = PrecededBy(
             Bind(
                Atom("xyz"),
                _ => Optional(Atom("0123"))
@@ -2244,7 +2332,7 @@ public static partial class AtomizeTests
          var scanner = new TextScanner(_reader.Text);
          scanner.Advance(TestOffset);
 
-         var actual = PrecededBy<ReadOnlyMemory<char>, char>(Atom("xyz012"))(scanner).IsMatch;
+         var actual = PrecededBy(Atom("xyz012"))(scanner).IsMatch;
 
          Assert.False(actual);
       }
@@ -2257,7 +2345,7 @@ public static partial class AtomizeTests
 
          var expected = scanner.Offset;
 
-         _ = PrecededBy<ReadOnlyMemory<char>, char>(Atom("xyz012"))(scanner);
+         _ = PrecededBy(Atom("xyz012"))(scanner);
 
          var actual = scanner.Offset;
 
@@ -2270,7 +2358,7 @@ public static partial class AtomizeTests
          var scanner = new TextScanner(_reader.Text);
          scanner.Advance(TestOffset);
 
-         var actual = PrecededBy<ReadOnlyMemory<char>, char>(Text.UppercaseLetter)(scanner).IsMatch;
+         var actual = PrecededBy(Multiple.UppercaseLetter)(scanner).IsMatch;
 
          Assert.False(actual);
       }
@@ -2283,7 +2371,7 @@ public static partial class AtomizeTests
 
          var expected = scanner.Offset;
 
-         _ = PrecededBy<ReadOnlyMemory<char>, char>(Text.UppercaseLetter)(scanner);
+         _ = PrecededBy(Multiple.UppercaseLetter)(scanner);
 
          var actual = scanner.Offset;
 
@@ -2293,7 +2381,7 @@ public static partial class AtomizeTests
       [Fact]
       public void PrecededBy_NonMatching_Start_Is_Failure()
       {
-         var actual = PrecededBy<ReadOnlyMemory<char>, char>(Text.UppercaseLetter)(_reader).IsMatch;
+         var actual = PrecededBy(Multiple.UppercaseLetter)(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -2303,7 +2391,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = PrecededBy<ReadOnlyMemory<char>, char>(Text.UppercaseLetter)(_reader);
+         _ = PrecededBy(Multiple.UppercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -2316,7 +2404,7 @@ public static partial class AtomizeTests
          var scanner = new TextScanner(_reader.Text);
          scanner.Advance(TestOffset);
 
-         var actual = IfPrecededBy(Atom("0123"), Character.LowercaseLetter)(scanner).IsMatch;
+         var actual = IfPrecededBy(Atom("0123"), Parse.Single.LowercaseLetter)(scanner).IsMatch;
 
          Assert.True(actual);
       }
@@ -2329,7 +2417,7 @@ public static partial class AtomizeTests
 
          var expected = scanner.Offset + 4;
 
-         _ = IfPrecededBy(Atom("0123"), Character.LowercaseLetter)(scanner);
+         _ = IfPrecededBy(Atom("0123"), Parse.Single.LowercaseLetter)(scanner);
 
          var actual = scanner.Offset;
 
@@ -2404,7 +2492,7 @@ public static partial class AtomizeTests
          var scanner = new TextScanner(_reader.Text);
          scanner.Advance(TestOffset);
 
-         var actual = IfPrecededBy(Atom("0123"), Character.UppercaseLetter)(scanner).IsMatch;
+         var actual = IfPrecededBy(Atom("0123"), Parse.Single.UppercaseLetter)(scanner).IsMatch;
 
          Assert.False(actual);
       }
@@ -2417,7 +2505,7 @@ public static partial class AtomizeTests
 
          var expected = scanner.Offset;
 
-         _ = IfPrecededBy(Atom("0123"), Character.UppercaseLetter)(scanner);
+         _ = IfPrecededBy(Atom("0123"), Parse.Single.UppercaseLetter)(scanner);
 
          var actual = scanner.Offset;
 
@@ -2427,7 +2515,7 @@ public static partial class AtomizeTests
       [Fact]
       public void IfPrecededBy_NonMatching_Start_Is_Failure()
       {
-         var actual = IfPrecededBy(Atom("0123"), Character.UppercaseLetter)(_reader).IsMatch;
+         var actual = IfPrecededBy(Atom("0123"), Parse.Single.UppercaseLetter)(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -2437,7 +2525,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = IfPrecededBy(Atom("0123"), Character.UppercaseLetter)(_reader);
+         _ = IfPrecededBy(Atom("0123"), Parse.Single.UppercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -2447,7 +2535,7 @@ public static partial class AtomizeTests
       [Fact]
       public void IfPrecededBy_NonMatching_Assertion_Start_Is_Failure()
       {
-         var actual = IfPrecededBy(Atom("abc"), Character.UppercaseLetter)(_reader).IsMatch;
+         var actual = IfPrecededBy(Atom("abc"), Parse.Single.UppercaseLetter)(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -2457,7 +2545,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = IfPrecededBy(Atom("abc"), Character.UppercaseLetter)(_reader);
+         _ = IfPrecededBy(Atom("abc"), Parse.Single.UppercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -2474,7 +2562,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Range_Matching_Zero_Times_Is_EmptyToken()
       {
-         var actual = Range(0, 0, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = Repeat(0, 0, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -2482,7 +2570,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Range_Matching_AtLeast_Min_Times_Is_Atom()
       {
-         var actual = Range(1, 26, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = Repeat(1, 26, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -2492,7 +2580,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset + TestOffset;
 
-         _ = Range(1, 27, Parse.Character.LowercaseLetter)(_reader);
+         _ = Repeat(1, 27, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -2502,7 +2590,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Range_Matching_LessThan_Min_Times_Is_Failure()
       {
-         var actual = Range(27, 27, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = Repeat(27, 27, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -2512,7 +2600,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = Range(27, 27, Parse.Character.LowercaseLetter)(_reader);
+         _ = Repeat(27, 27, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -2522,7 +2610,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Range_Matching_Negative_Count_Is_Failure()
       {
-         var actual = Range(-1, 26, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = Repeat(-1, 26, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -2532,7 +2620,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = Range(-1, 26, Parse.Character.LowercaseLetter)(_reader);
+         _ = Repeat(-1, 26, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -2542,7 +2630,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Range_Matching_Max_LessThan_Min_Is_Failure()
       {
-         var actual = Range(26, 1, Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = Repeat(26, 1, Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -2552,7 +2640,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = Range(26, 1, Parse.Character.LowercaseLetter)(_reader);
+         _ = Repeat(26, 1, Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -2826,7 +2914,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Atom_Matching_Regex_Is_Atom()
       {
-         var actual = Parse.Character.LowercaseLetter(_reader).IsMatch;
+         var actual = Parse.Single.LowercaseLetter(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -2836,7 +2924,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset + 1;
 
-         _ = Parse.Character.LowercaseLetter(_reader);
+         _ = Parse.Single.LowercaseLetter(_reader);
 
          var actual = _reader.Offset;
 
@@ -2846,7 +2934,7 @@ public static partial class AtomizeTests
       [Fact]
       public void Atom_NonMatching_Regex_Is_Failure()
       {
-         var actual = Parse.Character.UppercaseLetter(_reader).IsMatch;
+         var actual = Parse.Single.UppercaseLetter(_reader).IsMatch;
 
          Assert.False(actual);
       }
@@ -2856,7 +2944,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = Parse.Character.UppercaseLetter(_reader);
+         _ = Parse.Single.UppercaseLetter(_reader);
 
          var actual = _reader.Offset;
 
@@ -3049,7 +3137,7 @@ public static partial class AtomizeTests
       [Fact]
       public void ZeroOrMore_Matching_Zero_Times_Is_Atom()
       {
-         var actual = ZeroOrMore(Parse.Character.UppercaseLetter)(_reader).IsMatch;
+         var actual = ZeroOrMore(Parse.Single.UppercaseLetter)(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -3059,7 +3147,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset;
 
-         _ = ZeroOrMore(Parse.Character.UppercaseLetter)(_reader);
+         _ = ZeroOrMore(Parse.Single.UppercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -3069,7 +3157,7 @@ public static partial class AtomizeTests
       [Fact]
       public void ZeroOrMore_Matching_GreaterThan_Zero_Times_Is_Atom()
       {
-         var actual = ZeroOrMore(Parse.Character.LowercaseLetter)(_reader).IsMatch;
+         var actual = ZeroOrMore(Parse.Single.LowercaseLetter)(_reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -3079,7 +3167,7 @@ public static partial class AtomizeTests
       {
          var expected = _reader.Offset + TestOffset;
 
-         _ = ZeroOrMore(Parse.Character.LowercaseLetter)(_reader);
+         _ = ZeroOrMore(Parse.Single.LowercaseLetter)(_reader);
 
          var actual = _reader.Offset;
 
@@ -3090,7 +3178,7 @@ public static partial class AtomizeTests
       public void ZeroOrMore_FullMatch_Is_Atom()
       {
          var reader = new TextScanner(TestText[0..TestOffset]);
-         var actual = ZeroOrMore(Parse.Character.LowercaseLetter)(reader).IsMatch;
+         var actual = ZeroOrMore(Parse.Single.LowercaseLetter)(reader).IsMatch;
 
          Assert.True(actual);
       }
@@ -3101,7 +3189,7 @@ public static partial class AtomizeTests
          var reader = new TextScanner(TestText[0..TestOffset]);
          var expected = reader.Offset + TestOffset;
 
-         _ = ZeroOrMore(Parse.Character.LowercaseLetter)(reader);
+         _ = ZeroOrMore(Parse.Single.LowercaseLetter)(reader);
 
          var actual = reader.Offset;
 

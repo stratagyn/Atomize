@@ -16,6 +16,8 @@ public record TextScanner
          (Chars, _imap) = Squeeze(text);
       else
          Chars = new ReadOnlyMemory<char>(text.ToCharArray());
+
+      PackratIdentifier = GlobalIdentifier.GetId(this);
    }
 
    internal TextScanner(ReadOnlyMemory<char> chars)
@@ -193,7 +195,7 @@ public record TextScanner
 
       while (index < text.Length)
       {
-         var match = Parse.Text.WhitespacePattern.Match(text, index);
+         var match = Parse.Multiple.WhitespacePattern.Match(text, index);
 
          if (match.Success && match.Index == index && stringContext == 0)
          {

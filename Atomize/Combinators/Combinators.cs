@@ -8,6 +8,9 @@ public static partial class Parse
    public static Parser<char> Choice(params char[] parsers) =>
        (TextScanner scanner) =>
        {
+          if (parsers.Length == 0)
+             return new EmptyToken<char>(scanner.Offset);
+
           var at = scanner.Offset;
 
           if (!scanner.StartsWith(parsers))
@@ -19,6 +22,9 @@ public static partial class Parse
    public static Parser<ReadOnlyMemory<char>> Choice(params Regex[] parsers) =>
        (TextScanner scanner) =>
        {
+          if (parsers.Length == 0)
+             return new EmptyToken<ReadOnlyMemory<char>>(scanner.Offset);
+
           var at = scanner.Offset;
 
           if (!scanner.StartsWith(parsers, out var length))
@@ -30,6 +36,9 @@ public static partial class Parse
    public static Parser<ReadOnlyMemory<char>> Choice(params string[] parsers) =>
        (TextScanner scanner) =>
        {
+          if (parsers.Length == 0)
+             return new EmptyToken<ReadOnlyMemory<char>>(scanner.Offset);
+
           var at = scanner.Offset;
 
           if (!scanner.StartsWith(parsers, out var length))
@@ -67,6 +76,9 @@ public static partial class Parse
           return Undo<T>(scanner, at, at, errorMessage);
        };
 
+   public static Parser<T> DirectLeftRecursion<T>(Parser<T> parser) =>
+       new DLRParser<T>(parser).Apply;
+
    public static Parser<IList<T>> Exactly<T>(int n, Parser<T> parser) =>
        (TextScanner scanner) =>
        {
@@ -89,7 +101,7 @@ public static partial class Parse
           return new Token<IList<T>>(at, scanner.Offset - at, matched);
        };
 
-   public static Parser<T> FollowedBy<A, T>(Parser<A> assertion) =>
+   public static Parser<T> FollowedBy<T>(Parser<T> assertion) =>
        (TextScanner scanner) =>
        {
           var at = scanner.Offset;
@@ -238,6 +250,31 @@ public static partial class Parse
           return parsed;
        };
 
+   public static Parser<T> LeftRecursion<T>(Parser<T> parser) =>
+       new ILRParser<T>(parser).Apply;
+
+   public static Parser<T> Island<O, T, C>(Parser<O> open, Parser<T> parser, Parser<C> close) =>
+      (TextScanner scanner) =>
+      {
+         var at = scanner.Offset;
+         var opener = open(scanner);
+
+         if (!opener.IsMatch)
+            return Undo<T>(scanner, opener.Offset, at, opener.Why);
+
+         var parsed = parser(scanner);
+
+         if (!parsed.IsMatch)
+            return Undo<T>(scanner, parsed.Offset, at, parsed.Why);
+
+         var closer = close(scanner);
+
+         if (!closer.IsMatch)
+            return Undo<T>(scanner, closer.Offset, at, closer.Why);
+
+         return parsed;
+      };
+
    public static Parser<IList<T>> Join<S, T>(Parser<S> separator, params Parser<T>[] parsers) => (TextScanner scanner) =>
    {
       if (parsers.Length == 0)
@@ -273,28 +310,6 @@ public static partial class Parse
 
       return new Token<IList<T>>(at, scanner.Offset - at, matched);
    };
-
-   public static Parser<T> Island<O, T, C>(Parser<O> open, Parser<T> parser, Parser<C> close) =>
-       (TextScanner scanner) =>
-       {
-          var at = scanner.Offset;
-          var opener = open(scanner);
-
-          if (!opener.IsMatch)
-             return Undo<T>(scanner, opener.Offset, at, opener.Why);
-
-          var parsed = parser(scanner);
-
-          if (!parsed.IsMatch)
-             return Undo<T>(scanner, parsed.Offset, at, parsed.Why);
-
-          var closer = close(scanner);
-
-          if (!closer.IsMatch)
-             return Undo<T>(scanner, closer.Offset, at, closer.Why);
-
-          return parsed;
-       };
 
    public static Parser<IList<T>> Maximum<T>(int n, Parser<T> parser) =>
        (TextScanner scanner) =>
@@ -353,7 +368,7 @@ public static partial class Parse
           return new Token<IList<T>>(at, scanner.Offset - at, matched);
        };
 
-   public static Parser<T> NotFollowedBy<A, T>(Parser<A> assertion) =>
+   public static Parser<T> NotFollowedBy<T>(Parser<T> assertion) =>
       (TextScanner scanner) =>
       {
          var at = scanner.Offset;
@@ -367,13 +382,13 @@ public static partial class Parse
          return new EmptyToken<T>(at);
       };
 
-   public static Parser<T> NotPrecededBy<A, T>(Parser<A> assertion) =>
+   public static Parser<T> NotPrecededBy<T>(Parser<T> assertion) =>
        (TextScanner scanner) =>
        {
           var at = scanner.Offset;
 
           var currentOffset = 0;
-          IParseResult<A>? precededBy = null;
+          IParseResult<T>? precededBy = null;
 
           scanner.Offset = 0;
 
@@ -466,12 +481,12 @@ public static partial class Parse
                second.Length, (first, second));
        };
 
-   public static Parser<T> PrecededBy<A, T>(Parser<A> assertion) =>
+   public static Parser<T> PrecededBy<T>(Parser<T> assertion) =>
        (TextScanner scanner) =>
        {
           var at = scanner.Offset;
           var currentOffset = 0;
-          IParseResult<A>? precededBy = null;
+          IParseResult<T>? precededBy = null;
 
           scanner.Offset = 0;
 
@@ -504,7 +519,10 @@ public static partial class Parse
           return new EmptyToken<T>(at);
        };
 
-   public static Parser<IList<T>> Range<T>(int min, int max, Parser<T> parser) =>
+   public static Parser<T> Ref<T>(Func<Parser<T>> parserRef) =>
+      new ParserReference<T>(parserRef).Parse;
+
+   public static Parser<IList<T>> Repeat<T>(int min, int max, Parser<T> parser) =>
        (TextScanner scanner) =>
        {
           if (min < 0 || max < min)
@@ -525,9 +543,6 @@ public static partial class Parse
 
           return new Token<IList<T>>(at, scanner.Offset - at, matched);
        };
-
-   public static Parser<T> Ref<T>(Func<Parser<T>> parserRef) =>
-       new ParserReference<T>(parserRef).Parse;
 
    public static Parser<T> Satisfies<T>(Parser<T> parser, Func<T, bool> test) =>
        (TextScanner scanner) =>

@@ -198,7 +198,7 @@ public partial class AtomizeTests
       [Fact]
       public void StartsWith_Matching_Regex_Is_True()
       {
-         var actual = Parse.Character.LowercaseLetter(_scanner).IsMatch;
+         var actual = Parse.Single.LowercaseLetter(_scanner).IsMatch;
 
          Assert.True(actual);
       }
@@ -208,7 +208,7 @@ public partial class AtomizeTests
       {
          _scanner.Advance(TestOffset);
 
-         var actual = Parse.Character.LowercaseLetter(_scanner).IsMatch;
+         var actual = Parse.Single.LowercaseLetter(_scanner).IsMatch;
 
          Assert.False(actual);
       }
@@ -216,7 +216,7 @@ public partial class AtomizeTests
       [Fact]
       public void StartsWith_NonMatching_Regex_Is_False()
       {
-         var actual = Parse.Text.Number(_scanner).IsMatch;
+         var actual = Parse.Multiple.Number(_scanner).IsMatch;
 
          Assert.False(actual);
       }

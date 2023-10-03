@@ -4,13 +4,13 @@ namespace Atomize;
 
 public static partial class Parse
 {
-   public static partial class Text
+   public static partial class Multiple
    {
       public static readonly Parser<ReadOnlyMemory<char>> AlphaNumeric = Atom(AlphaNumericRegex());
 
       public static readonly Parser<ReadOnlyMemory<char>> Any = Atom(AnyRegex());
 
-      public static readonly Parser<ReadOnlyMemory<char>> Digits = Atom(DigitRegex());
+      public static readonly Parser<ReadOnlyMemory<char>> Digit = Atom(DigitRegex());
 
       public static readonly Parser<ReadOnlyMemory<char>> DoubleQuotedString = Atom(DoubleQuotedStringRegex());
 

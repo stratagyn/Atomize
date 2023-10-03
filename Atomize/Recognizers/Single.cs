@@ -4,7 +4,7 @@ namespace Atomize;
 
 public static partial class Parse
 {
-   public static partial class Character
+   public static partial class Single
    {
       public static readonly Parser<char> AlphaNumeric = Map(
           Atom(AlphaNumericRegex()), token => token.Span[0]);

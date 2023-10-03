@@ -4,10 +4,147 @@ using System.Runtime.Serialization;
 
 namespace Atomize;
 
-internal struct PackratParser<T>
+internal class PackratParser<T>
 {
-   private static readonly ObjectIDGenerator _idGenerator = new();
+   private readonly IDictionary<long, IDictionary<int, IParseResult<T>>> _parsed;
+   private readonly Parser<T> _parser;
 
+   public PackratParser(Parser<T> parser)
+   {
+      _parsed = new Dictionary<long, IDictionary<int, IParseResult<T>>>();
+      _parser = parser;
+   }
+
+   public IParseResult<T> Apply(TextScanner scanner)
+   {
+      if (scanner.PackratIdentifier == 0)
+         scanner.PackratIdentifier = GlobalIdentifier.GetId(scanner);
+
+      var at = scanner.Offset;
+
+      if (!_parsed.TryGetValue(scanner.PackratIdentifier, out var results))
+      {
+         var result = _parser(scanner);
+         results = new Dictionary<int, IParseResult<T>>() { [at] = result };
+         _parsed[scanner.PackratIdentifier] = results;
+
+         return result;
+      }
+
+      if (results.TryGetValue(at, out var parsedResult))
+      {
+         scanner.Advance(parsedResult.Length);
+
+         return parsedResult;
+      }
+
+      parsedResult = _parser(scanner);
+
+      results[at] = parsedResult;
+
+      return parsedResult;
+   }
+}
+
+internal class DLRParser<T>
+{
+   private readonly IDictionary<long, IDictionary<int, IParseResult<T>>> _parsed;
+   private readonly Parser<T> _parser;
+
+   public DLRParser(Parser<T> parser)
+   {
+      _parsed = new Dictionary<long, IDictionary<int, IParseResult<T>>>();
+      _parser = parser;
+   }
+
+   public IParseResult<T> Apply(TextScanner scanner)
+   {
+      if (scanner.PackratIdentifier == 0)
+         scanner.PackratIdentifier = GlobalIdentifier.GetId(scanner);
+
+      var at = scanner.Offset;
+
+      if (!_parsed.TryGetValue(scanner.PackratIdentifier, out var results))
+      {
+         results = new Dictionary<int, IParseResult<T>>();
+
+         _parsed[scanner.PackratIdentifier] = results;
+      }
+
+      if (!results.TryGetValue(at, out var result))
+      {
+         var lr = new LR(at);
+
+         results[at] = lr;
+
+         result = _parser(scanner);
+
+         results[at] = result;
+
+         if (lr.Detected && result.IsMatch)
+            return GrowSeed(scanner, at, ref results);
+
+         return result;
+      }
+
+      scanner.Offset = result.Offset + result.Length;
+
+      if (result is LR leftRecursive)
+      {
+         leftRecursive.Detected = true;
+
+         return Parse.Fail<T>(scanner);
+      }
+
+      return result;
+   }
+
+   private IParseResult<T> GrowSeed(TextScanner scanner, int at, ref IDictionary<int, IParseResult<T>> results)
+   {
+      var seed = results[at];
+
+      while (true)
+      {
+         scanner.Offset = at;
+
+         var result = _parser(scanner);
+         var next = seed.Offset + seed.Length;
+
+         if (!result.IsMatch || scanner.Offset <= next)
+            break;
+
+         seed = results[at] = result;
+      }
+
+      scanner.Offset = seed.Offset + seed.Length;
+
+      return seed;
+   }
+
+   private class LR : IParseResult<T>
+   {
+      public LR(int at)
+      {
+         Offset = at;
+         Detected = false;
+      }
+
+      public bool Detected { get; set; }
+
+      public bool IsMatch => false;
+
+      public int Length => 0;
+
+      public int Offset { get; }
+
+      public T? Value => default;
+
+      public string Why => "";
+   }
+}
+
+internal class ILRParser<T>
+{
    private readonly long __id;
    private readonly IDictionary<int, LRHead> _heads;
    private readonly IDictionary<long, IDictionary<int, IParseResult<T>>> _parsed;
@@ -15,9 +152,9 @@ internal struct PackratParser<T>
 
    private LR? _lrstack;
 
-   public PackratParser(Parser<T> parser)
+   public ILRParser(Parser<T> parser)
    {
-      __id = _idGenerator.GetId(parser, out var _);
+      __id = GlobalIdentifier.GetId(parser);
       _heads = new Dictionary<int, LRHead>();
       _parsed = new Dictionary<long, IDictionary<int, IParseResult<T>>>();
       _parser = parser;
@@ -65,7 +202,7 @@ internal struct PackratParser<T>
       return recall;
    }
 
-   private readonly IParseResult<T> GrowSeed(TextScanner scanner, int at, in IDictionary<int, IParseResult<T>> results, LRHead head)
+   private IParseResult<T> GrowSeed(TextScanner scanner, int at, in IDictionary<int, IParseResult<T>> results, LRHead head)
    {
       var seed = results[at];
 
@@ -91,7 +228,7 @@ internal struct PackratParser<T>
       return seed;
    }
 
-   private readonly IParseResult<T> LRAnswer(TextScanner scanner, int at, LR lr, in IDictionary<int, IParseResult<T>> results)
+   private IParseResult<T> LRAnswer(TextScanner scanner, int at, LR lr, in IDictionary<int, IParseResult<T>> results)
    {
       var head = lr.Head;
 
@@ -106,7 +243,7 @@ internal struct PackratParser<T>
       return GrowSeed(scanner, at, results, head);
    }
 
-   private readonly IParseResult<T>? Recall(TextScanner scanner, int at)
+   private IParseResult<T>? Recall(TextScanner scanner, int at)
    {
       var results = _parsed[scanner.PackratIdentifier];
       var hasResult = results.TryGetValue(at, out var result);
@@ -126,7 +263,7 @@ internal struct PackratParser<T>
       return result;
    }
 
-   private readonly void SetupLeftRecursion(LR lr)
+   private void SetupLeftRecursion(LR lr)
    {
       lr.Head ??= new(_parser);
 
@@ -135,16 +272,13 @@ internal struct PackratParser<T>
       while (stack is not null && stack.Head != lr.Head)
       {
          stack.Head = lr.Head;
-         lr.Head.InvolvedSet.Add(_idGenerator.GetId(stack.Parser, out var _));
+         lr.Head.InvolvedSet.Add(GlobalIdentifier.GetId(stack.Parser));
          stack = stack.Next;
       }
    }
 
-   private readonly IDictionary<int, IParseResult<T>> SetupPackrat(TextScanner scanner)
+   private IDictionary<int, IParseResult<T>> SetupPackrat(TextScanner scanner)
    {
-      if (scanner.PackratIdentifier == 0)
-         scanner.PackratIdentifier = _idGenerator.GetId(scanner, out var _);
-
       if (!_parsed.TryGetValue(scanner.PackratIdentifier, out var results))
       {
          results = new Dictionary<int, IParseResult<T>>();
@@ -153,22 +287,6 @@ internal struct PackratParser<T>
       }
 
       return results;
-   }
-
-   private class LRHead
-   {
-      public LRHead(Parser<T> parser)
-      {
-         EvalSet = new HashSet<long>();
-         InvolvedSet = new HashSet<long>();
-         Parser = parser;
-      }
-
-      public ISet<long> EvalSet { get; set; }
-
-      public ISet<long> InvolvedSet { get; }
-
-      public Parser<T> Parser { get; }
    }
 
    private class LR : IParseResult<T>
@@ -201,4 +319,22 @@ internal struct PackratParser<T>
       public IParseResult<T> Seed { get; set; }
 
    }
+
+   private class LRHead
+   {
+      public LRHead(Parser<T> parser)
+      {
+         EvalSet = new HashSet<long>();
+         InvolvedSet = new HashSet<long>();
+         Parser = parser;
+      }
+
+      public ISet<long> EvalSet { get; set; }
+
+      public ISet<long> InvolvedSet { get; }
+
+      public Parser<T> Parser { get; }
+   }
+
+   
 }
