@@ -59,7 +59,7 @@ public static partial class Parse
       [GeneratedRegex(@"[0-9]+")]
       private static partial Regex DigitRegex();
 
-      [GeneratedRegex(@"""(.*(?<!\\))""")]
+      [GeneratedRegex(@"""(.*?(?<!\\))""")]
       private static partial Regex DoubleQuotedStringRegex();
 
       [GeneratedRegex(@"(\\[\\'0abfnrtv""])+")]
@@ -92,13 +92,13 @@ public static partial class Parse
       [GeneratedRegex(@"(\\|[!""#$%&'()*+,.\/:;<=>?@^_`{|}~-])+")]
       private static partial Regex PunctuationRegex();
 
-      [GeneratedRegex(@"(""(.*(?<!\\))"")|('(.*(?<!\\))')")]
+      [GeneratedRegex(@"(""(.*?(?<!\\))"")|('(.*?(?<!\\))')")]
       private static partial Regex QuotedStringRegex();
 
       [GeneratedRegex(@"/(.*?(?<!\\))/")]
       private static partial Regex RegularExpressionRegex();
 
-      [GeneratedRegex(@"'(.*(?<!\\))'")]
+      [GeneratedRegex(@"'(.*?(?<!\\))'")]
       private static partial Regex SingleQuotedStringRegex();
 
       [GeneratedRegex(@"(\\u(?:([0-9a-fA-F]{4})|(?:\{((?:10[0-9a-fA-F]{4})|(?:0?[0-9a-fA-F]{5})|(?:[0-9a-fA-F]{1,4}))\})))+")]
