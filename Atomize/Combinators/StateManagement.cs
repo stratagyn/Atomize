@@ -59,6 +59,42 @@ public static partial class Parse
           return new Token<U>(result.Offset, result.Length, map(result.Value!));
        };
 
+   public static Parser<(IParseResult<T>, IParseResult<U>)> Or<T, U>(Parser<T> parser1, Parser<U> parser2) =>
+       (TextScanner scanner) =>
+       {
+          var at = scanner.Offset;
+          var first = parser1(scanner);
+
+          if (first.IsMatch)
+          {
+             var result = parser2(scanner);
+             var length = result.IsMatch ? scanner.Offset - at : first.Length;
+
+             if (!result.IsMatch)
+                scanner.Offset = at + first.Length;
+
+             return new Token<(IParseResult<T>, IParseResult<U>)>(
+                  at,
+                  length,
+                  (first, result));
+          }
+
+          scanner.Offset = at;
+
+          var second = parser2(scanner);
+
+          if (!second.IsMatch)
+             return Undo<(IParseResult<T>, IParseResult<U>)>(
+                  scanner,
+                  second.Offset,
+                  at,
+                  $"{{@ {first.Offset} : {first.Why}}} \u2228 {{@ {second.Offset} : {second.Why}}}");
+
+          return new Token<(IParseResult<T>, IParseResult<U>)>(
+               at,
+               second.Length, (first, second));
+       };
+
    public static Parser<(T Partial, IParseResult<U> Full)> Partial<T, U>(Parser<T> parser, Func<T, Parser<U>> bind) =>
        (TextScanner scanner) =>
        {

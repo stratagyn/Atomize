@@ -15,6 +15,7 @@
     <PackageTags>parsing; text; combinatory parsing; peg; parsing expression grammar;</PackageTags>
     <PackageLicenseExpression>  GPL-3.0-or-later</PackageLicenseExpression>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Version>1.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
