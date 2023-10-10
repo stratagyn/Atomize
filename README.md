@@ -19,7 +19,8 @@ dotnet add package Atomize
 ## Documentation
 
 [User Guide](https://github.com/stratagyn/Atomize/blob/master/docs/UserGuide.md)  
-[References](https://github.com/stratagyn/Atomize/tree/master/docs/References)
+[References](https://github.com/stratagyn/Atomize/tree/master/docs/References)  
+[Grammar Grammar: An Introduction to `Atomize`](https://medium.com/@stratagyn/grammar-grammar-an-introduction-to-atomize-706b54af7939)
 
 ## Example: `BasicCalculator`
 
@@ -56,7 +57,7 @@ public static class BasicCalculator
       DirectLeftRecursion(
          Choice(
             from left in Ref(() => Multiplicative!)
-            from op in Choice(Atom('*'), Atom('/')),
+            from op in Choice('*', '/'),
             from right in Atomic
             select op == '*'
                ? left * double.Parse(right.Span)
@@ -70,13 +71,15 @@ public static class BasicCalculator
       DirectLeftRecursion(
          Choice(
             from left in Ref(() => Additive!)
-            from op in Choice(Atom('+'), Atom('-')),
+            from op in Choice('+', '-'),
             from right in Multiplicative
             select op == '+'
                ? left + double.Parse(right.Span)
                : left - double.Parse(right.Span),
             
-            Multiplicative)); 
+            Multiplicative
+         )
+      ); 
 
    public static IParseResult<double> Apply(TextScanner expr) => 
       Additive(expr);
